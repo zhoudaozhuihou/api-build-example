@@ -11,7 +11,8 @@ import {
   Code as CodeIcon, 
   List as ListIcon,
   ImportExport as ImportExportIcon,
-  Category as CategoryIcon
+  Category as CategoryIcon,
+  MenuBook as MenuBookIcon
 } from '@material-ui/icons';
 
 const useStyles = makeStyles((theme) => ({
@@ -61,6 +62,15 @@ function Navigation() {
             <ImportExportIcon className={classes.logo} />
             API 构建工作流
           </Typography>
+          <Link to="/catalog" className={classes.link}>
+            <Button 
+              color="inherit" 
+              className={isActive('/catalog') ? classes.activeButton : ''}
+              startIcon={<MenuBookIcon />}
+            >
+              <span className={classes.buttonText}>API 目录</span>
+            </Button>
+          </Link>
           <Link to="/" className={classes.link}>
             <Button 
               color="inherit" 

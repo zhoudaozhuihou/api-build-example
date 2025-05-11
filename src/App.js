@@ -10,6 +10,7 @@ import TableSelection from './components/TableSelection';
 import ApiBuilder from './components/ApiBuilder';
 import ApiList from './components/ApiList';
 import CategorySelectorDemo from './components/CategorySelectorDemo';
+import ApiCatalog from './pages/ApiCatalog';
 
 // 创建主题
 const theme = createTheme({
@@ -152,6 +153,7 @@ function AppContent() {
         )}
         <div>
           <Switch>
+            <Route path="/catalog" component={ApiCatalog} />
             <Route path="/category-demo" component={CategorySelectorDemo} />
             <Route path="*">
               {getStepContent(activeStep)}
