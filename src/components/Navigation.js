@@ -6,13 +6,10 @@ import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
 import { Link, useLocation } from 'react-router-dom';
 import { 
-  Storage as StorageIcon, 
-  TableChart as TableIcon, 
-  Code as CodeIcon, 
-  List as ListIcon,
   ImportExport as ImportExportIcon,
   Category as CategoryIcon,
-  MenuBook as MenuBookIcon
+  MenuBook as MenuBookIcon,
+  Code as CodeIcon,
 } from '@material-ui/icons';
 
 const useStyles = makeStyles((theme) => ({
@@ -60,7 +57,7 @@ function Navigation() {
         <Toolbar className={classes.toolbar}>
           <Typography variant="h6" className={classes.title}>
             <ImportExportIcon className={classes.logo} />
-            API 构建工作流
+            API 构建平台
           </Typography>
           <Link to="/catalog" className={classes.link}>
             <Button 
@@ -71,40 +68,13 @@ function Navigation() {
               <span className={classes.buttonText}>API 目录</span>
             </Button>
           </Link>
-          <Link to="/" className={classes.link}>
+          <Link to="/lowcode" className={classes.link}>
             <Button 
               color="inherit" 
-              className={isActive('/') ? classes.activeButton : ''} 
-              startIcon={<StorageIcon />}
-            >
-              <span className={classes.buttonText}>数据库连接</span>
-            </Button>
-          </Link>
-          <Link to="/tables" className={classes.link}>
-            <Button 
-              color="inherit" 
-              className={isActive('/tables') ? classes.activeButton : ''}
-              startIcon={<TableIcon />}
-            >
-              <span className={classes.buttonText}>表格选择</span>
-            </Button>
-          </Link>
-          <Link to="/builder" className={classes.link}>
-            <Button 
-              color="inherit" 
-              className={isActive('/builder') ? classes.activeButton : ''}
+              className={isActive('/lowcode') ? classes.activeButton : ''} 
               startIcon={<CodeIcon />}
             >
-              <span className={classes.buttonText}>API 构建</span>
-            </Button>
-          </Link>
-          <Link to="/apis" className={classes.link}>
-            <Button 
-              color="inherit" 
-              className={isActive('/apis') ? classes.activeButton : ''}
-              startIcon={<ListIcon />}
-            >
-              <span className={classes.buttonText}>API 列表</span>
+              <span className={classes.buttonText}>低代码构建</span>
             </Button>
           </Link>
           <Link to="/category-demo" className={classes.link}>

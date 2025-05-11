@@ -17,9 +17,16 @@ import {
   Chip,
   Box,
   Divider,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
 } from '@material-ui/core';
 import { Alert } from '@material-ui/lab';
-import { ArrowBack, ArrowForward, Add as AddIcon } from '@material-ui/icons';
+import { ArrowBack, ArrowForward, Add as AddIcon, Delete as DeleteIcon } from '@material-ui/icons';
 import CategoryCascader from './CategoryCascader';
 import { apiCategories } from '../constants/apiCategories';
 
@@ -58,15 +65,54 @@ const useStyles = makeStyles((theme) => ({
   categorySection: {
     marginTop: theme.spacing(2),
     marginBottom: theme.spacing(2),
-  }
+  },
+  sqlPreview: {
+    marginTop: theme.spacing(2),
+    padding: theme.spacing(2),
+    backgroundColor: theme.palette.grey[100],
+    fontFamily: 'monospace',
+    whiteSpace: 'pre-wrap',
+    overflowX: 'auto',
+  },
+  tableContainer: {
+    marginTop: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+  },
+  lineageSection: {
+    marginTop: theme.spacing(2),
+    padding: theme.spacing(2),
+    border: `1px solid ${theme.palette.divider}`,
+    borderRadius: theme.shape.borderRadius,
+  },
 }));
 
 // 模拟数据
-const mockColumns = [
-  { id: 1, name: 'id', type: 'INT', description: '主键ID' },
-  { id: 2, name: 'name', type: 'VARCHAR', description: '名称' },
-  { id: 3, name: 'created_at', type: 'DATETIME', description: '创建时间' },
-  { id: 4, name: 'updated_at', type: 'DATETIME', description: '更新时间' },
+const mockTables = [
+  { id: 1, name: 'users', description: '用户信息表', columns: [
+    { id: 1, name: 'id', type: 'INT', description: '主键ID' },
+    { id: 2, name: 'name', type: 'VARCHAR', description: '用户名称' },
+    { id: 3, name: 'email', type: 'VARCHAR', description: '用户邮箱' },
+    { id: 4, name: 'created_at', type: 'DATETIME', description: '创建时间' },
+  ]},
+  { id: 2, name: 'products', description: '产品信息表', columns: [
+    { id: 1, name: 'id', type: 'INT', description: '主键ID' },
+    { id: 2, name: 'name', type: 'VARCHAR', description: '产品名称' },
+    { id: 3, name: 'price', type: 'DECIMAL', description: '产品价格' },
+    { id: 4, name: 'category_id', type: 'INT', description: '分类ID' },
+  ]},
+  { id: 3, name: 'orders', description: '订单信息表', columns: [
+    { id: 1, name: 'id', type: 'INT', description: '主键ID' },
+    { id: 2, name: 'user_id', type: 'INT', description: '用户ID' },
+    { id: 3, name: 'product_id', type: 'INT', description: '产品ID' },
+    { id: 4, name: 'quantity', type: 'INT', description: '数量' },
+    { id: 5, name: 'total', type: 'DECIMAL', description: '总金额' },
+    { id: 6, name: 'created_at', type: 'DATETIME', description: '创建时间' },
+  ]},
+  { id: 4, name: 'categories', description: '产品分类表', columns: [
+    { id: 1, name: 'id', type: 'INT', description: '主键ID' },
+    { id: 2, name: 'name', type: 'VARCHAR', description: '分类名称' },
+    { id: 3, name: 'parent_id', type: 'INT', description: '父级分类ID' },
+  ]},
 ];
 
 const httpMethods = ['GET', 'POST', 'PUT', 'DELETE'];
@@ -82,12 +128,69 @@ function ApiBuilder({ onNext, onBack }) {
     selectedColumns: [],
     parameters: [],
     categories: [],
+    upstreamSystems: [],
   });
   const [notification, setNotification] = useState({
     open: false,
     message: '',
     severity: 'success',
   });
+  const [joinMode, setJoinMode] = useState(false);
+  const [joinData, setJoinData] = useState(null);
+  const [availableColumns, setAvailableColumns] = useState([]);
+  const [upstreamInput, setUpstreamInput] = useState({ name: '', description: '' });
+
+  // 初始化时检查是否有JOIN模式的数据
+  useEffect(() => {
+    const storedJoinData = localStorage.getItem('joinTablesData');
+    if (storedJoinData) {
+      try {
+        const parsedData = JSON.parse(storedJoinData);
+        setJoinData(parsedData);
+        setJoinMode(true);
+        
+        // 如果是JOIN模式，收集所有可用列
+        if (parsedData.selectedTables && parsedData.selectedTables.length > 0) {
+          const allColumns = [];
+          parsedData.selectedTables.forEach(table => {
+            const tableColumns = table.columns.map(col => ({
+              id: `${table.id}_${col.id}`,
+              name: `${table.name}.${col.name}`,
+              tableId: table.id,
+              columnId: col.id,
+              tableName: table.name,
+              columnName: col.name,
+              type: col.type,
+              description: col.description
+            }));
+            allColumns.push(...tableColumns);
+          });
+          setAvailableColumns(allColumns);
+        }
+      } catch (e) {
+        console.error('解析JOIN数据失败', e);
+      }
+    } else {
+      // 单表模式
+      const selectedTable = JSON.parse(localStorage.getItem('selectedTable'));
+      if (selectedTable) {
+        const tableData = mockTables.find(t => t.id === selectedTable.id);
+        if (tableData) {
+          const tableColumns = tableData.columns.map(col => ({
+            id: `${tableData.id}_${col.id}`,
+            name: `${tableData.name}.${col.name}`,
+            tableId: tableData.id,
+            columnId: col.id,
+            tableName: tableData.name,
+            columnName: col.name,
+            type: col.type,
+            description: col.description
+          }));
+          setAvailableColumns(tableColumns);
+        }
+      }
+    }
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -97,11 +200,11 @@ function ApiBuilder({ onNext, onBack }) {
     }));
   };
 
-  const handleColumnChange = (column) => {
+  const handleColumnChange = (columnId) => {
     setApiConfig((prev) => {
-      const selectedColumns = prev.selectedColumns.includes(column.id)
-        ? prev.selectedColumns.filter((id) => id !== column.id)
-        : [...prev.selectedColumns, column.id];
+      const selectedColumns = prev.selectedColumns.includes(columnId)
+        ? prev.selectedColumns.filter((id) => id !== columnId)
+        : [...prev.selectedColumns, columnId];
       return { ...prev, selectedColumns };
     });
   };
@@ -158,6 +261,26 @@ function ApiBuilder({ onNext, onBack }) {
     }));
   };
 
+  const handleAddUpstream = () => {
+    if (upstreamInput.name.trim()) {
+      setApiConfig((prev) => ({
+        ...prev,
+        upstreamSystems: [
+          ...prev.upstreamSystems,
+          { ...upstreamInput, id: Date.now() }
+        ],
+      }));
+      setUpstreamInput({ name: '', description: '' });
+    }
+  };
+
+  const handleRemoveUpstream = (id) => {
+    setApiConfig((prev) => ({
+      ...prev,
+      upstreamSystems: prev.upstreamSystems.filter(system => system.id !== id),
+    }));
+  };
+
   const handleSubmit = () => {
     if (!apiConfig.name) {
       setNotification({
@@ -186,22 +309,53 @@ function ApiBuilder({ onNext, onBack }) {
       return;
     }
 
-    const selectedTable = JSON.parse(localStorage.getItem('selectedTable')) || { name: 'default_table' };
-    const selectedColumnNames = apiConfig.selectedColumns
-      .map((id) => mockColumns.find((col) => col.id === id)?.name)
-      .filter(Boolean)
-      .join(', ');
-    const sqlQuery = `SELECT ${selectedColumnNames} FROM ${selectedTable.name}`;
+    let sqlQuery = '';
+    let tableInfo = {};
+
+    if (joinMode && joinData) {
+      // 多表模式
+      sqlQuery = joinData.sqlPreview;
+      tableInfo = {
+        joinMode: true,
+        tables: joinData.selectedTables.map(t => t.name).join(', '),
+        joinData: joinData
+      };
+    } else {
+      // 单表模式
+      const selectedTable = JSON.parse(localStorage.getItem('selectedTable')) || { name: 'default_table' };
+      const selectedColumnNames = apiConfig.selectedColumns
+        .map(id => {
+          const column = availableColumns.find(col => col.id === id);
+          return column ? column.name : null;
+        })
+        .filter(Boolean)
+        .join(', ');
+      sqlQuery = `SELECT ${selectedColumnNames} FROM ${selectedTable.name}`;
+      tableInfo = {
+        joinMode: false,
+        table: selectedTable.name
+      };
+    }
 
     const apiData = {
       ...apiConfig,
-      table: selectedTable.name,
+      ...tableInfo,
       sqlQuery,
       createdAt: new Date().toISOString(),
     };
 
     const existingApis = JSON.parse(localStorage.getItem('apis') || '[]');
     localStorage.setItem('apis', JSON.stringify([...existingApis, apiData]));
+
+    // 保存API血缘关系数据
+    if (apiConfig.upstreamSystems && apiConfig.upstreamSystems.length > 0) {
+      const lineageData = {
+        upstream: apiConfig.upstreamSystems,
+        downstream: [],
+        users: [],
+      };
+      localStorage.setItem(`apiLineage_${apiData.id}`, JSON.stringify(lineageData));
+    }
 
     setNotification({
       open: true,
@@ -258,13 +412,13 @@ function ApiBuilder({ onNext, onBack }) {
               name="path"
               value={apiConfig.path}
               onChange={handleChange}
-              placeholder="/api/resource"
+              placeholder="/api/v1/resource"
             />
           </Grid>
           <Grid item xs={12}>
             <TextField
               fullWidth
-              label="描述"
+              label="API 描述"
               name="description"
               value={apiConfig.description}
               onChange={handleChange}
@@ -273,137 +427,280 @@ function ApiBuilder({ onNext, onBack }) {
             />
           </Grid>
         </Grid>
-        
-        <div className={classes.categorySection}>
-          <CategoryCascader 
-            value={apiConfig.categories} 
-            onChange={handleCategoryChange}
-            title="API 分类"
-            placeholder="请选择 API 分类" 
-            categoriesData={apiCategories}
-          />
-        </div>
+
+        {joinMode && joinData && (
+          <div className={classes.tableContainer}>
+            <Typography variant="h6" className={classes.sectionTitle}>
+              表连接设置
+            </Typography>
+            <TableContainer component={Paper} variant="outlined">
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>主表</TableCell>
+                    <TableCell>连接类型</TableCell>
+                    <TableCell>连接表</TableCell>
+                    <TableCell>连接条件</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {joinData.joins.map((join, index) => {
+                    const mainTable = joinData.selectedTables.find(t => t.id === join.mainTableId);
+                    const joinTable = joinData.selectedTables.find(t => t.id === join.joinTableId);
+                    const mainColumn = mainTable?.columns.find(c => c.id === join.mainTableColumn);
+                    const joinColumn = joinTable?.columns.find(c => c.id === join.joinTableColumn);
+                    
+                    return (
+                      <TableRow key={join.id}>
+                        <TableCell>{mainTable?.name || '-'}</TableCell>
+                        <TableCell>{join.joinType}</TableCell>
+                        <TableCell>{joinTable?.name || '-'}</TableCell>
+                        <TableCell>
+                          {mainTable?.name}.{mainColumn?.name} = {joinTable?.name}.{joinColumn?.name}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            
+            <Typography variant="subtitle2" style={{ marginTop: '8px' }}>
+              SQL预览:
+            </Typography>
+            <pre className={classes.sqlPreview}>
+              {joinData.sqlPreview}
+            </pre>
+          </div>
+        )}
 
         <Divider className={classes.sectionDivider} />
 
         <Typography variant="h6" className={classes.sectionTitle}>
-          选择表格字段
+          字段选择
         </Typography>
-
         <FormGroup>
-          {mockColumns.map((column) => (
-            <FormControlLabel
-              key={column.id}
-              control={
-                <Checkbox
-                  checked={apiConfig.selectedColumns.includes(column.id)}
-                  onChange={() => handleColumnChange(column)}
+          <Grid container spacing={2}>
+            {availableColumns.map((column) => (
+              <Grid item xs={12} sm={6} md={4} key={column.id}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={apiConfig.selectedColumns.includes(column.id)}
+                      onChange={() => handleColumnChange(column.id)}
+                      color="primary"
+                    />
+                  }
+                  label={
+                    <div>
+                      <Typography variant="body2">{column.name}</Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        {column.type} - {column.description}
+                      </Typography>
+                    </div>
+                  }
                 />
-              }
-              label={`${column.name} (${column.type}) - ${column.description}`}
-            />
-          ))}
+              </Grid>
+            ))}
+          </Grid>
         </FormGroup>
 
         <Divider className={classes.sectionDivider} />
 
         <Typography variant="h6" className={classes.sectionTitle}>
-          参数设置
+          请求参数
+          <Button
+            variant="outlined"
+            color="primary"
+            size="small"
+            startIcon={<AddIcon />}
+            onClick={handleAddParameter}
+            style={{ marginLeft: 16 }}
+          >
+            添加参数
+          </Button>
         </Typography>
 
-        {apiConfig.parameters.map((param, index) => (
-          <div key={index} className={classes.parameterContainer}>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={3}>
-                <TextField
-                  fullWidth
-                  label="参数名"
-                  value={param.name}
-                  onChange={(e) =>
-                    handleParameterChange(index, 'name', e.target.value)
-                  }
-                />
-              </Grid>
-              <Grid item xs={12} sm={3}>
-                <FormControl fullWidth>
-                  <InputLabel>类型</InputLabel>
-                  <Select
-                    value={param.type}
-                    onChange={(e) =>
-                      handleParameterChange(index, 'type', e.target.value)
+        {apiConfig.parameters.length === 0 ? (
+          <Typography variant="body2" color="textSecondary">
+            未设置请求参数
+          </Typography>
+        ) : (
+          apiConfig.parameters.map((param, index) => (
+            <div key={index} className={classes.parameterContainer}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="参数名称"
+                    value={param.name}
+                    onChange={(e) => handleParameterChange(index, 'name', e.target.value)}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel>参数类型</InputLabel>
+                    <Select
+                      value={param.type}
+                      onChange={(e) => handleParameterChange(index, 'type', e.target.value)}
+                    >
+                      {parameterTypes.map((type) => (
+                        <MenuItem key={type} value={type}>
+                          {type}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={param.required}
+                        onChange={(e) => handleParameterChange(index, 'required', e.target.checked)}
+                        color="primary"
+                      />
                     }
+                    label="必填"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="参数描述"
+                    value={param.description}
+                    onChange={(e) => handleParameterChange(index, 'description', e.target.value)}
+                  />
+                </Grid>
+                <Grid item xs={12} container justifyContent="flex-end">
+                  <Button
+                    variant="outlined"
+                    color="secondary"
+                    size="small"
+                    onClick={() => handleRemoveParameter(index)}
                   >
-                    {parameterTypes.map((type) => (
-                      <MenuItem key={type} value={type}>
-                        {type}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                    移除
+                  </Button>
+                </Grid>
               </Grid>
-              <Grid item xs={12} sm={3}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={param.required}
-                      onChange={(e) =>
-                        handleParameterChange(
-                          index,
-                          'required',
-                          e.target.checked
-                        )
-                      }
-                    />
-                  }
-                  label="必填"
-                />
-              </Grid>
-              <Grid item xs={12} sm={3}>
-                <Button
-                  variant="outlined"
-                  color="secondary"
-                  onClick={() => handleRemoveParameter(index)}
-                  fullWidth
-                >
-                  删除
-                </Button>
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="描述"
-                  value={param.description}
-                  onChange={(e) =>
-                    handleParameterChange(index, 'description', e.target.value)
-                  }
-                />
-              </Grid>
-            </Grid>
-          </div>
-        ))}
+            </div>
+          ))
+        )}
 
-        <Button
-          startIcon={<AddIcon />}
-          onClick={handleAddParameter}
-          variant="outlined"
-          style={{ marginTop: '1rem' }}
-        >
-          添加参数
-        </Button>
+        <Divider className={classes.sectionDivider} />
+
+        <Typography variant="h6" className={classes.sectionTitle}>
+          API 血缘关系
+        </Typography>
+        <div className={classes.lineageSection}>
+          <Typography variant="subtitle1" gutterBottom>
+            上游系统/API
+            <Button
+              variant="outlined"
+              color="primary"
+              size="small"
+              startIcon={<AddIcon />}
+              onClick={handleAddUpstream}
+              style={{ marginLeft: 16 }}
+            >
+              添加上游系统
+            </Button>
+          </Typography>
+
+          {apiConfig.upstreamSystems.length === 0 ? (
+            <Typography variant="body2" color="textSecondary">
+              未设置上游依赖
+            </Typography>
+          ) : (
+            <TableContainer component={Paper} variant="outlined" style={{ marginTop: 16, marginBottom: 16 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>系统名称</TableCell>
+                    <TableCell>描述</TableCell>
+                    <TableCell width="10%">操作</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {apiConfig.upstreamSystems.map((system) => (
+                    <TableRow key={system.id}>
+                      <TableCell>{system.name}</TableCell>
+                      <TableCell>{system.description}</TableCell>
+                      <TableCell>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleRemoveUpstream(system.id)}
+                        >
+                          <DeleteIcon fontSize="small" color="error" />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+
+          <Grid container spacing={2} style={{ marginTop: 8 }}>
+            <Grid item xs={12} sm={5}>
+              <TextField
+                fullWidth
+                size="small"
+                label="上游系统名称"
+                value={upstreamInput.name}
+                onChange={(e) => setUpstreamInput({ ...upstreamInput, name: e.target.value })}
+              />
+            </Grid>
+            <Grid item xs={12} sm={7}>
+              <TextField
+                fullWidth
+                size="small"
+                label="描述"
+                value={upstreamInput.description}
+                onChange={(e) => setUpstreamInput({ ...upstreamInput, description: e.target.value })}
+              />
+            </Grid>
+          </Grid>
+        </div>
+
+        <Divider className={classes.sectionDivider} />
+
+        <div className={classes.categorySection}>
+          <Typography variant="h6" gutterBottom>
+            API 分类
+          </Typography>
+          <CategoryCascader
+            options={apiCategories}
+            onChange={handleCategoryChange}
+            multiple
+          />
+          <div className={classes.chips}>
+            {apiConfig.categories.map((category) => (
+              <Chip
+                key={category.value}
+                label={category.label}
+                className={classes.chip}
+                color="primary"
+                variant="outlined"
+              />
+            ))}
+          </div>
+        </div>
 
         <div className={classes.buttonContainer}>
           <Button
             variant="contained"
-            onClick={onBack}
+            color="default"
             startIcon={<ArrowBack />}
+            onClick={onBack}
           >
             返回
           </Button>
           <Button
             variant="contained"
             color="primary"
-            onClick={handleSubmit}
             endIcon={<ArrowForward />}
+            onClick={handleSubmit}
           >
             创建 API
           </Button>
@@ -412,10 +709,13 @@ function ApiBuilder({ onNext, onBack }) {
 
       <Snackbar
         open={notification.open}
-        autoHideDuration={6000}
+        autoHideDuration={3000}
         onClose={handleCloseNotification}
       >
-        <Alert onClose={handleCloseNotification} severity={notification.severity}>
+        <Alert
+          onClose={handleCloseNotification}
+          severity={notification.severity}
+        >
           {notification.message}
         </Alert>
       </Snackbar>
