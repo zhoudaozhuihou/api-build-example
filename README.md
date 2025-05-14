@@ -111,4 +111,42 @@ api-build-example/
 
 ## License
 
-This project is licensed under the MIT License. 
+This project is licensed under the MIT License.
+
+## Migration from Create React App to Vite
+
+This project has been migrated from Create React App to Vite for faster development and build times.
+
+### Key Changes
+
+1. Removed `react-scripts` and added Vite dependencies
+2. Created a Vite configuration file (`vite.config.js`)
+3. Set up public assets handling to match CRA's behavior
+4. Updated React mounting code for Vite compatibility
+5. Added environment variable handling in Vite config
+
+### Running the Project
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run start
+# or on Windows
+npm run start-windows
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+```
+
+### Benefits of Vite
+
+- Faster development server startup
+- Instant hot module replacement
+- Optimized builds
+- ESM-based dev server
+- Enhanced plugin ecosystem 

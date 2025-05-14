@@ -4,12 +4,16 @@ import AppBar from '@material-ui/core/AppBar';
 import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
 import Button from '@material-ui/core/Button';
-import { Link, useLocation } from 'react-router-dom';
+import Menu from '@material-ui/core/Menu';
+import MenuItem from '@material-ui/core/MenuItem';
+import { Link, useLocation, useHistory } from 'react-router-dom';
 import { 
   ImportExport as ImportExportIcon,
   Category as CategoryIcon,
   MenuBook as MenuBookIcon,
   Code as CodeIcon,
+  Home as HomeIcon,
+  ArrowDropDown as ArrowDropDownIcon,
 } from '@material-ui/icons';
 
 const useStyles = makeStyles((theme) => ({
@@ -40,15 +44,37 @@ const useStyles = makeStyles((theme) => ({
   toolbar: {
     paddingLeft: theme.spacing(2),
     paddingRight: theme.spacing(2),
+  },
+  menuButton: {
+    display: 'flex',
+    alignItems: 'center',
+  },
+  menuItem: {
+    minWidth: 150,
   }
 }));
 
 function Navigation() {
   const classes = useStyles();
   const location = useLocation();
+  const history = useHistory();
+  const [anchorEl, setAnchorEl] = React.useState(null);
   
   const isActive = (path) => {
     return location.pathname === path;
+  };
+
+  const handleMenuClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleHomePageChange = (path) => {
+    history.push(path);
+    handleMenuClose();
   };
 
   return (
@@ -59,6 +85,45 @@ function Navigation() {
             <ImportExportIcon className={classes.logo} />
             API 构建平台
           </Typography>
+          
+          <Button 
+            color="inherit" 
+            className={isActive('/') || isActive('/marketing') || isActive('/developer') ? classes.activeButton : ''}
+            startIcon={<HomeIcon />}
+            endIcon={<ArrowDropDownIcon />}
+            onClick={handleMenuClick}
+          >
+            <span className={classes.buttonText}>首页</span>
+          </Button>
+          <Menu
+            anchorEl={anchorEl}
+            keepMounted
+            open={Boolean(anchorEl)}
+            onClose={handleMenuClose}
+          >
+            <MenuItem 
+              onClick={() => handleHomePageChange('/')}
+              selected={isActive('/')}
+              className={classes.menuItem}
+            >
+              标准首页
+            </MenuItem>
+            <MenuItem 
+              onClick={() => handleHomePageChange('/marketing')}
+              selected={isActive('/marketing')}
+              className={classes.menuItem}
+            >
+              营销首页
+            </MenuItem>
+            <MenuItem 
+              onClick={() => handleHomePageChange('/developer')}
+              selected={isActive('/developer')}
+              className={classes.menuItem}
+            >
+              开发者首页
+            </MenuItem>
+          </Menu>
+          
           <Link to="/catalog" className={classes.link}>
             <Button 
               color="inherit" 

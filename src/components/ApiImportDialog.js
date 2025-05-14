@@ -17,6 +17,8 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  createTheme,
+  ThemeProvider,
 } from '@material-ui/core';
 import { Alert } from '@material-ui/lab';
 import { 
@@ -25,6 +27,11 @@ import {
   Description as FormIcon,
   Save as SaveIcon,
 } from '@material-ui/icons';
+import MUIRichTextEditor from 'mui-rte';
+import { convertToRaw, convertFromRaw, EditorState } from 'draft-js';
+
+// Create a theme for the rich text editor
+const defaultTheme = createTheme();
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -71,6 +78,7 @@ function ApiImportDialog({ open, onClose, onImportSuccess }) {
   });
   const [upstreamInput, setUpstreamInput] = useState({ name: '', description: '' });
   const [userInput, setUserInput] = useState({ name: '', role: '', department: '' });
+  const [editorState, setEditorState] = useState(EditorState.createEmpty());
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -81,6 +89,24 @@ function ApiImportDialog({ open, onClose, onImportSuccess }) {
     setFormData({
       ...formData,
       [name]: value,
+    });
+  };
+
+  const handleEditorChange = (state) => {
+    setEditorState(state);
+    // Convert the editor content to raw format and store it in formData
+    const contentState = state.getCurrentContent();
+    const rawContent = JSON.stringify(convertToRaw(contentState));
+    setFormData({
+      ...formData,
+      description: rawContent,
+    });
+  };
+
+  const handleEditorSave = (data) => {
+    setFormData({
+      ...formData,
+      description: data,
     });
   };
 
@@ -300,15 +326,22 @@ function ApiImportDialog({ open, onClose, onImportSuccess }) {
               />
             </Grid>
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="API 描述"
-                name="description"
-                value={formData.description}
-                onChange={handleFormChange}
-                multiline
-                rows={2}
-              />
+              <Typography variant="subtitle1" gutterBottom>API 描述</Typography>
+              <Paper variant="outlined" style={{ padding: '2px', minHeight: '200px' }}>
+                <ThemeProvider theme={defaultTheme}>
+                  <MUIRichTextEditor
+                    label="输入API详细描述..."
+                    onChange={handleEditorChange}
+                    onSave={handleEditorSave}
+                    inlineToolbar={true}
+                    controls={[
+                      'title', 'bold', 'italic', 'underline', 'strikethrough', 
+                      'highlight', 'undo', 'redo', 'link', 'numberList', 
+                      'bulletList', 'quote', 'code', 'clear'
+                    ]}
+                  />
+                </ThemeProvider>
+              </Paper>
             </Grid>
 
             <Grid item xs={12}>

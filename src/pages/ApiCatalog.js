@@ -11,6 +11,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  ListItemIcon,
   Collapse,
   IconButton,
   Box,
@@ -67,7 +68,6 @@ import {
   PeopleAlt as PeopleIcon,
   Group as TeamIcon,
   Done as DoneIcon,
-  ListItemIcon,
   ArrowBack as ArrowBackIcon,
   GetApp as GetAppIcon,
   
@@ -78,6 +78,7 @@ import {
 import { apiCategories } from '../constants/apiCategories';
 import ApiLineage from '../components/ApiLineage';
 import ApiImportDialog from '../components/ApiImportDialog';
+import ApiDetailDialog from '../components/ApiDetailDialog';
 
 // 背景图URL，您可以替换为自己的图片
 const headerBgImage = 'https://source.unsplash.com/random/1600x400/?api,technology,digital';
@@ -244,6 +245,38 @@ const useStyles = makeStyles((theme) => ({
   doubleNestedItem: {
     paddingLeft: theme.spacing(7),
     backgroundColor: 'rgba(0,0,0,0.03)',
+  },
+  categoryItemPrimary: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: theme.spacing(1, 2),
+    borderLeft: '3px solid transparent',
+    transition: 'all 0.2s',
+    '&:hover': {
+      backgroundColor: 'rgba(25, 118, 210, 0.04)',
+    },
+  },
+  selectedItemPrimary: {
+    backgroundColor: 'rgba(25, 118, 210, 0.08)',
+    borderLeft: `3px solid ${theme.palette.primary.main}`,
+    '&:hover': {
+      backgroundColor: 'rgba(25, 118, 210, 0.12)',
+    },
+  },
+  categoryCountPrimary: {
+    fontSize: '0.75rem',
+    color: theme.palette.text.secondary,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    borderRadius: '12px',
+    padding: theme.spacing(0.1, 0.8),
+    marginLeft: theme.spacing(1),
+    minWidth: '22px',
+    height: '20px',
+    textAlign: 'center',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   apiCard: {
     height: '320px', // 统一高度
@@ -1021,12 +1054,34 @@ const useStyles = makeStyles((theme) => ({
       whiteSpace: 'nowrap',
     },
   },
+  noSubscribersIndicator: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: theme.spacing(0.5),
+    borderRadius: '50%',
+    backgroundColor: theme.palette.background.default,
+    border: `1px dashed ${theme.palette.divider}`,
+    width: '24px',
+    height: '24px',
+  },
+  subscribersIndicator: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: theme.spacing(0.5),
+    borderRadius: '50%',
+    backgroundColor: theme.palette.action.selected,
+    border: `1px solid ${theme.palette.divider}`,
+    width: '24px',
+    height: '24px',
+  },
 }));
 
 // 模拟API数据
 let mockApis = [
   {
-    id: 'api-1',
+    id: 'api1',
     name: '用户认证API',
     description: '提供用户登录、注册和认证功能的API',
     category: '用户相关',
@@ -1038,7 +1093,7 @@ let mockApis = [
     lastUpdated: '2023-05-15',
   },
   {
-    id: 'api-2',
+    id: 'api2',
     name: '用户资料API',
     description: '获取和更新用户资料信息',
     category: '用户相关',
@@ -1050,7 +1105,7 @@ let mockApis = [
     lastUpdated: '2023-06-10',
   },
   {
-    id: 'api-3',
+    id: 'api3',
     name: '订单管理API',
     description: '创建、查询和管理订单的API',
     category: '订单相关',
@@ -1412,6 +1467,7 @@ const ApiCatalog = () => {
   const [lineageDialogOpen, setLineageDialogOpen] = useState(false);
   const [selectedApiForLineage, setSelectedApiForLineage] = useState(null);
   const [apiImportDialogOpen, setApiImportDialogOpen] = useState(false);
+  const [apiDetailDialogOpen, setApiDetailDialogOpen] = useState(false);
 
   // 关闭编辑对话框
   const handleEditDialogClose = () => {
@@ -1618,7 +1674,7 @@ const ApiCatalog = () => {
         <React.Fragment key={categoryId}>
           <ListItem 
             button 
-            className={`${listItemClass} ${classes.categoryItem} ${categoryApis.some(api => selectedApi && api.id === selectedApi.id) ? classes.selectedItem : ''}`}
+            className={`${listItemClass} ${classes.categoryItemPrimary} ${categoryApis.some(api => selectedApi && api.id === selectedApi.id) ? classes.selectedItemPrimary : ''}`}
           >
             <div style={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
               {hasChildren && (
@@ -1636,7 +1692,7 @@ const ApiCatalog = () => {
                 primary={
                   <span style={{ display: 'flex', alignItems: 'center' }}>
                     {categoryName}
-                    <span className={classes.categoryCount}>
+                    <span className={classes.categoryCountPrimary}>
                       {totalApiCount}
                     </span>
                   </span>
@@ -2055,6 +2111,7 @@ const ApiCatalog = () => {
   // 选择API进行展示
   const handleSelectApi = (api) => {
     setSelectedApi(api);
+    setApiDetailDialogOpen(true);
   };
 
   // 打开分类菜单
@@ -2089,17 +2146,84 @@ const ApiCatalog = () => {
 
   // 获取API的订阅者数据
   const getApiSubscribers = (apiId) => {
-    // ... existing code ...
+    // 模拟从订阅关系中获取数据
+    // 实际项目中，这应该是从API或状态管理中获取的数据
+    const mockSubscriptions = {
+      'api1': [
+        { team: '数据科学团队', userId: 'user1', subscriptionDate: '2023-05-10' },
+        { team: '营销团队', userId: 'user2', subscriptionDate: '2023-05-12' },
+        { team: '数据科学团队', userId: 'user3', subscriptionDate: '2023-05-15' }
+      ],
+      'api2': [
+        { team: '财务团队', userId: 'user4', subscriptionDate: '2023-05-08' },
+        { team: '客户服务', userId: 'user5', subscriptionDate: '2023-05-11' }
+      ],
+      'api3': [
+        { team: '产品团队', userId: 'user6', subscriptionDate: '2023-05-09' },
+        { team: '开发团队', userId: 'user7', subscriptionDate: '2023-05-13' },
+        { team: '测试团队', userId: 'user8', subscriptionDate: '2023-05-14' },
+        { team: '产品团队', userId: 'user9', subscriptionDate: '2023-05-16' }
+      ]
+    };
+    
+    return mockSubscriptions[apiId] || [];
   };
 
   // 获取不同的团队/部门数量
   const getUniqueTeams = (subscribers) => {
-    // ... existing code ...
+    if (!subscribers || subscribers.length === 0) return [];
+    
+    // 使用Set来确保团队名称唯一
+    const uniqueTeams = [...new Set(subscribers.map(sub => sub.team))];
+    return uniqueTeams;
   };
 
   // 渲染订阅者指示器
   const renderSubscribers = (api) => {
-    // ... existing code ...
+    if (!api || !api.id) return null;
+    
+    const subscribers = getApiSubscribers(api.id);
+    const uniqueTeams = getUniqueTeams(subscribers);
+    const totalSubscribers = subscribers.length;
+    
+    if (totalSubscribers === 0) {
+      return (
+        <Tooltip title="暂无团队订阅">
+          <div className={classes.noSubscribersIndicator}>
+            <TeamIcon fontSize="small" color="disabled" />
+            <Typography variant="caption" color="textSecondary">0</Typography>
+          </div>
+        </Tooltip>
+      );
+    }
+    
+    // 根据唯一团队数量显示不同的图标颜色和工具提示
+    return (
+      <Tooltip 
+        title={
+          <div>
+            <Typography variant="caption" style={{ fontWeight: 'bold' }}>
+              {totalSubscribers}个订阅者 / {uniqueTeams.length}个团队
+            </Typography>
+            <div>
+              {uniqueTeams.map((team, idx) => (
+                <div key={idx}>• {team} ({subscribers.filter(s => s.team === team).length})</div>
+              ))}
+            </div>
+          </div>
+        }
+      >
+        <div className={classes.subscribersIndicator}>
+          <TeamIcon 
+            fontSize="small" 
+            color={uniqueTeams.length > 2 ? "primary" : "action"} 
+          />
+          <Typography variant="caption" color="textPrimary">
+            {uniqueTeams.length}
+          </Typography>
+        </div>
+      </Tooltip>
+    );
   };
 
   // 渲染API卡片
@@ -2436,6 +2560,10 @@ const ApiCatalog = () => {
     setExpandedCategories(defaultExpanded);
   }, [categories]); // 只在categories变化时执行
 
+  const handleCloseApiDetailDialog = () => {
+    setApiDetailDialogOpen(false);
+  };
+
   return (
     <div className={classes.root}>
       {/* 头部区域 */}
@@ -2654,140 +2782,59 @@ const ApiCatalog = () => {
           {/* 右侧内容区 - 减少宽度 */}
           <Grid item xs={12} md={8} lg={9}>
             <Paper className={classes.rightPanel}>
-              {selectedApi ? (
-                // 显示选中的API详情
-                <div className={classes.apiDetailsPaper}>
-                  <div className={classes.apiDetailHeader}>
-                    <Typography variant="h5" className={classes.apiDetailTitle}>
-                      {selectedApi.name}
+              {/* 始终显示API列表 */}
+              <div>
+                <Grid container spacing={3} className={classes.apiGridContainer}>
+                  {getCurrentPageApis().map((api) => (
+                    <Grid item xs={12} sm={6} md={6} lg={4} xl={3} key={api.id} className={classes.apiGridItem}>
+                      {renderApiCard(api)}
+                    </Grid>
+                  ))}
+                </Grid>
+
+                {filteredApis.length > 0 ? (
+                  <div className={classes.paginationContainer}>
+                    <Typography className={classes.paginationInfo}>
+                      显示 {(page - 1) * 10 + 1} - {Math.min(page * 10, filteredApis.length)} 项，共 {filteredApis.length} 项
                     </Typography>
-                    <div>
-                      <Button 
-                        color="primary" 
-                        startIcon={<LineageIcon />}
-                        onClick={() => handleOpenLineageDialog(selectedApi)}
-                        style={{ marginRight: 8 }}
-                      >
-                        查看血缘关系
-                      </Button>
-                      <Button 
-                        variant="contained" 
-                        color="primary" 
-                        startIcon={<CodeIcon />}
-                      >
-                        调试API
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className={classes.apiDetailMetadata}>
-                    <AccessTimeIcon />
-                    <span>响应时间: {selectedApi.responseTime}</span>
-                    
-                    <EventIcon />
-                    <span>更新时间: {new Date(selectedApi.lastUpdated).toLocaleDateString()}</span>
-                    
-                    <PersonIcon />
-                    <span>所有者: {selectedApi.owner || '未分配'}</span>
-                  </div>
-
-                  <Divider style={{ margin: '16px 0' }} />
-
-                  <Typography variant="body1" paragraph>
-                    {selectedApi.description}
-                  </Typography>
-
-                  <Typography variant="h6" style={{ marginTop: 24, marginBottom: 8 }}>
-                    API 端点
-                  </Typography>
-                  <Paper variant="outlined" style={{ padding: 16 }}>
-                    {selectedApi.endpoints.map((endpoint, index) => (
-                      <Chip
-                        key={index}
-                        label={endpoint}
-                        className={classes.apiChip}
-                        icon={<HttpIcon />}
-                      />
-                    ))}
-                  </Paper>
-
-                  <Typography variant="h6" style={{ marginTop: 24, marginBottom: 8 }}>
-                    分类
-                  </Typography>
-                  <Paper variant="outlined" style={{ padding: 16 }}>
-                    <Chip
-                      label={selectedApi.category}
-                      className={classes.apiChip}
-                      icon={<CategoryIcon />}
-                      color="primary"
-                      variant="outlined"
+                    <Pagination 
+                      count={Math.ceil(filteredApis.length / 10)} 
+                      page={page}
+                      onChange={handlePageChange}
+                      color="primary" 
+                      showFirstButton 
+                      showLastButton
                     />
-                    {selectedApi.subCategory && (
-                      <Chip
-                        label={selectedApi.subCategory}
-                        className={classes.apiChip}
-                        icon={<LabelIcon />}
-                        color="secondary"
-                        variant="outlined"
-                      />
-                    )}
-                  </Paper>
-                </div>
-              ) : (
-                // 显示API列表
-                <div>
-                  <Grid container spacing={3} className={classes.apiGridContainer}>
-                    {getCurrentPageApis().map((api) => (
-                      <Grid item xs={12} sm={6} md={6} lg={4} xl={3} key={api.id} className={classes.apiGridItem}>
-                        {renderApiCard(api)}
-                      </Grid>
-                    ))}
-                  </Grid>
-
-                  {filteredApis.length > 0 ? (
-                    <div className={classes.paginationContainer}>
-                      <Typography className={classes.paginationInfo}>
-                        显示 {(page - 1) * 10 + 1} - {Math.min(page * 10, filteredApis.length)} 项，共 {filteredApis.length} 项
-                      </Typography>
-                      <Pagination 
-                        count={Math.ceil(filteredApis.length / 10)} 
-                        page={page}
-                        onChange={handlePageChange}
-                        color="primary" 
-                        showFirstButton 
-                        showLastButton
-                      />
-                    </div>
-                  ) : (
-                    <div className={classes.emptyState}>
-                      <FilterListIcon className={classes.emptyStateIcon} />
-                      <Typography variant="h6">未找到匹配的API</Typography>
-                      <Typography variant="body2" className={classes.emptyStateText}>
-                        没有找到符合当前筛选条件的API。尝试调整筛选条件或清除所有筛选器。
-                      </Typography>
-                      <Button
-                        variant="outlined"
-                        color="primary"
-                        startIcon={<ClearIcon />}
-                        style={{ marginTop: 16 }}
-                        onClick={() => {
-                          setAccessLevelFilter(null);
-                          setDataFieldFilters([]);
-                          setThemeFilters([]);
-                          setServiceFilters([]);
-                          setIndustryFilters([]);
-                          setMethodFilters({});
-                          setResponseTimeFilter('all');
-                          setStartDate('');
-                          setEndDate('');
-                        }}
-                      >
-                        清除所有筛选器
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                ) : (
+                  <div className={classes.emptyState}>
+                    <FilterListIcon className={classes.emptyStateIcon} />
+                    <Typography variant="h6">未找到匹配的API</Typography>
+                    <Typography variant="body2" className={classes.emptyStateText}>
+                      没有找到符合当前筛选条件的API。尝试调整筛选条件或清除所有筛选器。
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      startIcon={<ClearIcon />}
+                      style={{ marginTop: 16 }}
+                      onClick={() => {
+                        setAccessLevelFilter(null);
+                        setDataFieldFilters([]);
+                        setThemeFilters([]);
+                        setServiceFilters([]);
+                        setIndustryFilters([]);
+                        setMethodFilters({});
+                        setResponseTimeFilter('all');
+                        setStartDate('');
+                        setEndDate('');
+                      }}
+                    >
+                      清除所有筛选器
+                    </Button>
+                  </div>
+                )}
+              </div>
             </Paper>
           </Grid>
         </Grid>
@@ -2871,6 +2918,13 @@ const ApiCatalog = () => {
         open={apiImportDialogOpen}
         onClose={handleCloseImportDialog}
         onImportSuccess={handleImportSuccess}
+      />
+
+      {/* API详情对话框 */}
+      <ApiDetailDialog
+        open={apiDetailDialogOpen}
+        onClose={handleCloseApiDetailDialog}
+        api={selectedApi}
       />
     </div>
   );
