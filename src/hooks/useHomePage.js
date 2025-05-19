@@ -17,7 +17,8 @@ const useHomePage = (props = {}) => {
     heroHeight = '50vh',
     heroMinHeight = 400,
     heroOverlayOpacity = 0.7,
-    showHeroPattern = true
+    showHeroPattern = true,
+    showWorkflow = false
   } = props;
 
   const classes = makeStyles((theme) => ({
@@ -219,6 +220,20 @@ const useHomePage = (props = {}) => {
         margin: '12px auto',
         borderRadius: 2
       }
+    },
+    workflowSection: {
+      padding: theme.spacing(6, 0),
+      backgroundColor: 'white',
+    },
+    stepButton: {
+      margin: theme.spacing(2, 0, 0, 0),
+      borderRadius: 20,
+      padding: theme.spacing(0.5, 2),
+      textTransform: 'none',
+    },
+    stepLabel: {
+      fontWeight: 600,
+      color: theme.palette.primary.main
     }
   }));
 
@@ -255,6 +270,7 @@ const useHomePage = (props = {}) => {
     searchPlaceholder,
     searchButtonText,
     cardButtonText,
+    showWorkflow,
     handleSearchChange,
     handleSearchSubmit,
     navigateToFeature

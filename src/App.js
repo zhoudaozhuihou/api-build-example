@@ -15,8 +15,17 @@ import MarketingHomePage from './pages/MarketingHomePage';
 import DeveloperHomePage from './pages/DeveloperHomePage';
 import CategorySelectorDemo from './components/CategorySelectorDemo';
 
+// 新增页面组件
+import DatasetsPage from './pages/DatasetsPage';
+import ReviewCenterPage from './pages/ReviewCenterPage';
+import OrderCenterPage from './pages/OrderCenterPage';
+import ReviewOrdersPage from './pages/ReviewOrdersPage';
+import AnalyticsPage from './pages/AnalyticsPage';
+
 // 权限管理相关组件
 import UserAccountManagementPage from './pages/admin/UserAccountManagementPage';
+import ApiOwnershipManagementPage from './pages/admin/ApiOwnershipManagementPage';
+import AdminPage from './pages/admin/AdminPage';
 import UnauthorizedPage from './pages/admin/UnauthorizedPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
@@ -33,6 +42,7 @@ import { selectDarkMode } from './redux/slices/uiSlice';
 import { fetchApis, fetchCategories } from './redux/slices/apiSlice';
 import { fetchUsers, setCurrentUser } from './redux/slices/auth/userSlice';
 import { selectIsAuthenticated } from './redux/slices/authSlice';
+import { loginSuccess } from './redux/slices/authSlice';
 
 // 导入新主题
 import { lightTheme, darkTheme } from './theme';
@@ -61,8 +71,12 @@ const ViteIndicator = () => (
   </div>
 );
 
+import { FeatureFlagProvider, useFeatureFlags } from './contexts/FeatureFlagContext';
+import withFeatureAccess from './hoc/withFeatureAccess';
+
 function AppContent() {
   const isAuthenticated = useSelector(selectIsAuthenticated);
+  const { MODULES } = useFeatureFlags();
   
   // 如果未登录且不在登录页，重定向到登录页
   const PrivateRoute = ({ children, ...rest }) => {
@@ -85,6 +99,12 @@ function AppContent() {
     );
   };
 
+  // 使用高阶组件保护路由
+  const ProtectedDatasetsPage = withFeatureAccess(DatasetsPage, MODULES.DATASET_MANAGEMENT);
+  const ProtectedReviewOrdersPage = withFeatureAccess(ReviewOrdersPage, MODULES.REVIEW_ORDERS);
+  const ProtectedLowCode = withFeatureAccess(LowCode, MODULES.LOWCODE_BUILDER);
+  const ProtectedAnalyticsPage = withFeatureAccess(AnalyticsPage, MODULES.ANALYTICS);
+
   return (
     <ErrorBoundary>
       <Switch>
@@ -101,9 +121,24 @@ function AppContent() {
                   <ApiCatalog />
                 </Container>
               </Route>
+              <Route path="/datasets">
+                <Container maxWidth="lg" style={{ marginTop: '2rem', marginBottom: '2rem' }}>
+                  <ProtectedDatasetsPage />
+                </Container>
+              </Route>
+              <Route path="/review-orders">
+                <Container maxWidth="lg" style={{ marginTop: '2rem', marginBottom: '2rem' }}>
+                  <ProtectedReviewOrdersPage />
+                </Container>
+              </Route>
+              <Route path="/analytics">
+                <Container maxWidth="lg" style={{ marginTop: '2rem', marginBottom: '2rem' }}>
+                  <ProtectedAnalyticsPage />
+                </Container>
+              </Route>
               <Route path="/lowcode">
                 <Container maxWidth="lg" style={{ marginTop: '2rem', marginBottom: '2rem' }}>
-                  <LowCode />
+                  <ProtectedLowCode />
                 </Container>
               </Route>
               <Route path="/category-demo">
@@ -114,9 +149,90 @@ function AppContent() {
               
               {/* 权限管理路由 */}
               <ProtectedRoute 
+                path="/admin"
+                exact
+                permissions="admin_view"
+                component={AdminPage}
+              />
+              <ProtectedRoute 
                 path="/admin/users"
                 permissions="user_view"
                 component={UserAccountManagementPage}
+              />
+              <ProtectedRoute 
+                path="/admin/apis"
+                permissions="api_view"
+                component={ApiOwnershipManagementPage}
+              />
+              <ProtectedRoute 
+                path="/admin/settings"
+                permissions="admin_view"
+                component={() => (
+                  <Container maxWidth="lg" style={{ marginTop: '2rem', marginBottom: '2rem' }}>
+                    <Typography variant="h4" gutterBottom>系统配置</Typography>
+                    <Typography variant="body1">系统配置页面正在建设中...</Typography>
+                  </Container>
+                )}
+              />
+              <ProtectedRoute 
+                path="/admin/security"
+                permissions="admin_view"
+                component={() => (
+                  <Container maxWidth="lg" style={{ marginTop: '2rem', marginBottom: '2rem' }}>
+                    <Typography variant="h4" gutterBottom>安全与审计</Typography>
+                    <Typography variant="body1">安全与审计页面正在建设中...</Typography>
+                  </Container>
+                )}
+              />
+              <ProtectedRoute 
+                path="/admin/datasets"
+                permissions="admin_view"
+                component={() => (
+                  <Container maxWidth="lg" style={{ marginTop: '2rem', marginBottom: '2rem' }}>
+                    <Typography variant="h4" gutterBottom>数据集管理</Typography>
+                    <Typography variant="body1">数据集管理页面正在建设中...</Typography>
+                  </Container>
+                )}
+              />
+              <ProtectedRoute 
+                path="/admin/categories"
+                permissions="admin_view"
+                component={() => (
+                  <Container maxWidth="lg" style={{ marginTop: '2rem', marginBottom: '2rem' }}>
+                    <Typography variant="h4" gutterBottom>类别管理</Typography>
+                    <Typography variant="body1">类别管理页面正在建设中...</Typography>
+                  </Container>
+                )}
+              />
+              <ProtectedRoute 
+                path="/admin/system-status"
+                permissions="admin_view"
+                component={() => (
+                  <Container maxWidth="lg" style={{ marginTop: '2rem', marginBottom: '2rem' }}>
+                    <Typography variant="h4" gutterBottom>系统状态</Typography>
+                    <Typography variant="body1">系统状态页面正在建设中...</Typography>
+                  </Container>
+                )}
+              />
+              <ProtectedRoute 
+                path="/admin/usage-stats"
+                permissions="admin_view"
+                component={() => (
+                  <Container maxWidth="lg" style={{ marginTop: '2rem', marginBottom: '2rem' }}>
+                    <Typography variant="h4" gutterBottom>使用统计</Typography>
+                    <Typography variant="body1">使用统计页面正在建设中...</Typography>
+                  </Container>
+                )}
+              />
+              <ProtectedRoute 
+                path="/admin/review-reports"
+                permissions="admin_view"
+                component={() => (
+                  <Container maxWidth="lg" style={{ marginTop: '2rem', marginBottom: '2rem' }}>
+                    <Typography variant="h4" gutterBottom>审核报表</Typography>
+                    <Typography variant="body1">审核报表页面正在建设中...</Typography>
+                  </Container>
+                )}
               />
               <Route path="/unauthorized" component={UnauthorizedPage} />
               
@@ -152,18 +268,25 @@ function App() {
           const adminUser = response.payload.find(user => user.username === 'admin');
           if (adminUser) {
             dispatch(setCurrentUser(adminUser));
+            // 确保身份验证状态也被设置
+            dispatch(loginSuccess({
+              user: adminUser,
+              token: 'mock-jwt-token-for-admin'
+            }));
           }
         }
       });
   }, [dispatch]);
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <I18nProvider>
-        <AppContent />
-      </I18nProvider>
-    </ThemeProvider>
+    <FeatureFlagProvider initialMarket={process.env.REACT_APP_MARKET || 'china'}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <I18nProvider>
+          <AppContent />
+        </I18nProvider>
+      </ThemeProvider>
+    </FeatureFlagProvider>
   );
 }
 

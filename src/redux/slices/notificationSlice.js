@@ -126,9 +126,9 @@ export const createNotification = (notification) => (dispatch) => {
 };
 
 // 选择器
-export const selectNotifications = (state) => state.notification.notifications;
-export const selectUnseenCount = (state) => state.notification.unseenCount;
-export const selectNotificationLoading = (state) => state.notification.loading;
-export const selectNotificationError = (state) => state.notification.error;
+export const selectNotifications = (state) => state.notifications.notifications;
+export const selectUnseenCount = (state) => state.notifications.unseenCount;
+export const selectNotificationLoading = (state) => state.notifications.loading;
+export const selectNotificationError = (state) => state.notifications.error;
 
 export default notificationSlice.reducer; 

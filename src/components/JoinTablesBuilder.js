@@ -26,6 +26,9 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Box,
+  CircularProgress,
+  Tooltip
 } from '@material-ui/core';
 import { Alert } from '@material-ui/lab';
 import { 
@@ -35,8 +38,11 @@ import {
   TableChart, 
   Add as AddIcon, 
   Delete as DeleteIcon,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Autorenew as AutorenewIcon,
+  Info as InfoIcon
 } from '@material-ui/icons';
+import DatabaseTableService from '../services/DatabaseTableService';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -85,6 +91,47 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(2),
     backgroundColor: theme.palette.grey[100],
     fontFamily: 'monospace',
+    whiteSpace: 'pre-wrap',
+    overflowX: 'auto',
+  },
+  loading: {
+    display: 'flex',
+    justifyContent: 'center',
+    padding: theme.spacing(3),
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing(2),
+  },
+  connectionInfo: {
+    marginBottom: theme.spacing(2),
+    padding: theme.spacing(2),
+    backgroundColor: theme.palette.background.default,
+    borderRadius: theme.shape.borderRadius,
+    display: 'flex',
+    alignItems: 'center',
+  },
+  connectionIcon: {
+    marginRight: theme.spacing(1),
+    color: theme.palette.primary.main,
+  },
+  suggestJoinButton: {
+    marginTop: theme.spacing(1),
+  },
+  joinSuggestionConfidence: {
+    marginLeft: theme.spacing(1),
+    opacity: 0.7,
+    fontSize: '0.8rem',
+  },
+  errorText: {
+    color: theme.palette.error.main,
+    marginTop: theme.spacing(1),
+  },
+  tableGrid: {
+    height: '400px',
+    overflow: 'auto',
   },
 }));
 
@@ -119,7 +166,7 @@ const mockTables = [
 
 const joinTypes = ['INNER JOIN', 'LEFT JOIN', 'RIGHT JOIN', 'FULL JOIN'];
 
-function JoinTablesBuilder({ onNext, onBack }) {
+function JoinTablesBuilder({ onConfigure, onBack, toggleJoinMode, connection }) {
   const classes = useStyles();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTables, setSelectedTables] = useState([]);
@@ -130,15 +177,44 @@ function JoinTablesBuilder({ onNext, onBack }) {
     severity: 'success',
   });
   const [sqlPreview, setSqlPreview] = useState('');
+  const [isLoadingTables, setIsLoadingTables] = useState(false);
+  const [tables, setTables] = useState([]);
+  const [isSuggestingJoins, setIsSuggestingJoins] = useState(false);
+  const [suggestedJoins, setSuggestedJoins] = useState([]);
+  const [errors, setErrors] = useState({});
 
-  const filteredTables = mockTables.filter((table) =>
-    table.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    table.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // 加载数据库表
+  useEffect(() => {
+    if (connection) {
+      loadTables();
+    }
+  }, [connection]);
 
+  // 当选中的表格或连接关系更改时，生成SQL预览
   useEffect(() => {
     generateSqlPreview();
   }, [selectedTables, joins]);
+
+  const loadTables = async () => {
+    try {
+      setIsLoadingTables(true);
+      const tablesData = await DatabaseTableService.getTables(connection);
+      setTables(tablesData);
+      setIsLoadingTables(false);
+    } catch (error) {
+      setNotification({
+        open: true,
+        message: error.message || '获取数据库表失败',
+        severity: 'error',
+      });
+      setIsLoadingTables(false);
+    }
+  };
+
+  const filteredTables = tables.filter((table) =>
+    table.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (table.description && table.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   const handleTableSelect = (table) => {
     // 检查是否已经选择过
@@ -160,13 +236,16 @@ function JoinTablesBuilder({ onNext, onBack }) {
       const mainTable = updatedTables[0];
       const joinTable = updatedTables[1];
       setJoins([{
-        id: 1,
+        id: Date.now(),
         mainTableId: mainTable.id,
         joinTableId: joinTable.id,
         mainTableColumn: null,
         joinTableColumn: null,
         joinType: 'INNER JOIN',
       }]);
+      
+      // 自动推荐连接条件
+      suggestJoins();
     }
 
     setNotification({
@@ -196,15 +275,16 @@ function JoinTablesBuilder({ onNext, onBack }) {
       setNotification({
         open: true,
         message: '请先选择至少两个表格',
-        severity: 'error',
+        severity: 'warning',
       });
       return;
     }
 
+    // 创建新的JOIN条件
     const newJoin = {
-      id: joins.length > 0 ? Math.max(...joins.map(j => j.id)) + 1 : 1,
+      id: Date.now(),
       mainTableId: selectedTables[0].id,
-      joinTableId: selectedTables[1].id,
+      joinTableId: selectedTables.length > 1 ? selectedTables[1].id : null,
       mainTableColumn: null,
       joinTableColumn: null,
       joinType: 'INNER JOIN',
@@ -214,53 +294,175 @@ function JoinTablesBuilder({ onNext, onBack }) {
   };
 
   const handleRemoveJoin = (joinId) => {
-    setJoins(joins.filter(j => j.id !== joinId));
+    const updatedJoins = joins.filter(j => j.id !== joinId);
+    setJoins(updatedJoins);
   };
 
   const handleJoinChange = (joinId, field, value) => {
-    setJoins(joins.map(join => 
-      join.id === joinId ? { ...join, [field]: value } : join
-    ));
+    const updatedJoins = joins.map(join => {
+      if (join.id === joinId) {
+        return { ...join, [field]: value };
+      }
+      return join;
+    });
+    setJoins(updatedJoins);
   };
 
   const generateSqlPreview = () => {
     if (selectedTables.length === 0) {
-      setSqlPreview('');
+      setSqlPreview('-- 请先选择表格');
       return;
     }
 
-    // 主表
+    // 验证连接配置
+    const errors = {};
+    const validJoins = joins.filter(join => {
+      const isValid = 
+        join.mainTableId && 
+        join.joinTableId && 
+        join.mainTableColumn && 
+        join.joinTableColumn;
+      
+      if (!isValid) {
+        if (!join.mainTableId) errors[`join_${join.id}_mainTableId`] = '请选择主表';
+        if (!join.joinTableId) errors[`join_${join.id}_joinTableId`] = '请选择关联表';
+        if (!join.mainTableColumn) errors[`join_${join.id}_mainTableColumn`] = '请选择主表列';
+        if (!join.joinTableColumn) errors[`join_${join.id}_joinTableColumn`] = '请选择关联表列';
+      }
+      
+      return isValid;
+    });
+    
+    setErrors(errors);
+
+    // 如果没有有效的连接配置，则只显示主表
+    if (validJoins.length === 0 && selectedTables.length > 0) {
+      const mainTable = selectedTables[0];
+      const sql = `SELECT * FROM ${mainTable.name}`;
+      setSqlPreview(sql);
+      return;
+    }
+
+    // 生成含有JOIN的SQL
+    let sql = 'SELECT\n  ';
+    
+    // 添加选择的字段
+    const selectFields = selectedTables.map(table => 
+      `${table.name}.*`
+    ).join(',\n  ');
+    
+    sql += selectFields;
+    
+    // 添加主表
     const mainTable = selectedTables[0];
-    
-    let sql = `SELECT \n`;
-    
-    // 选择的字段
-    const columns = selectedTables.flatMap(table => 
-      table.columns.map(col => `  ${table.name}.${col.name} AS ${table.name}_${col.name}`)
-    );
-    
-    sql += columns.join(',\n');
     sql += `\nFROM ${mainTable.name}`;
     
-    // JOIN子句
-    joins.forEach(join => {
-      const mainTable = mockTables.find(t => t.id === join.mainTableId);
-      const joinTable = mockTables.find(t => t.id === join.joinTableId);
-      
-      if (mainTable && joinTable && join.mainTableColumn && join.joinTableColumn) {
-        const mainColumn = mainTable.columns.find(c => c.id === join.mainTableColumn);
-        const joinColumn = joinTable.columns.find(c => c.id === join.joinTableColumn);
+    // 添加JOIN子句
+    if (validJoins.length > 0) {
+      sql += '\n';
+      validJoins.forEach(join => {
+        const joinTable = selectedTables.find(t => t.id === join.joinTableId);
+        const mainTableName = selectedTables.find(t => t.id === join.mainTableId)?.name;
         
-        if (mainColumn && joinColumn) {
-          sql += `\n${join.joinType} ${joinTable.name} ON ${mainTable.name}.${mainColumn.name} = ${joinTable.name}.${joinColumn.name}`;
+        if (joinTable && mainTableName) {
+          sql += `${join.joinType} ${joinTable.name} ON ${mainTableName}.${join.mainTableColumn} = ${joinTable.name}.${join.joinTableColumn}\n`;
         }
-      }
-    });
+      });
+    }
     
     setSqlPreview(sql);
   };
 
+  const suggestJoins = async () => {
+    if (selectedTables.length < 2) {
+      setNotification({
+        open: true,
+        message: '请先选择至少两个表格',
+        severity: 'warning',
+      });
+      return;
+    }
+
+    try {
+      setIsSuggestingJoins(true);
+      let suggested = [];
+
+      // 对每对表进行连接建议
+      for (let i = 0; i < selectedTables.length; i++) {
+        for (let j = i + 1; j < selectedTables.length; j++) {
+          const sourceTable = selectedTables[i];
+          const targetTable = selectedTables[j];
+          
+          // 使用服务获取推荐连接
+          const recommendations = await DatabaseTableService.recommendJoins(
+            connection, 
+            sourceTable.name, 
+            targetTable.name
+          );
+          
+          if (recommendations.length > 0) {
+            suggested = [...suggested, ...recommendations];
+          }
+        }
+      }
+      
+      setSuggestedJoins(suggested);
+      setIsSuggestingJoins(false);
+      
+      if (suggested.length === 0) {
+        setNotification({
+          open: true,
+          message: '未找到建议的连接关系',
+          severity: 'info',
+        });
+      }
+    } catch (error) {
+      console.error('Error suggesting joins:', error);
+      setNotification({
+        open: true,
+        message: error.message || '获取连接建议失败',
+        severity: 'error',
+      });
+      setIsSuggestingJoins(false);
+    }
+  };
+
+  const applySuggestedJoins = () => {
+    if (suggestedJoins.length === 0) {
+      return;
+    }
+
+    // 创建新的连接配置
+    const newJoins = suggestedJoins.map((suggestion, index) => {
+      const mainTable = selectedTables.find(t => t.name === suggestion.sourceTable);
+      const joinTable = selectedTables.find(t => t.name === suggestion.targetTable);
+      
+      if (!mainTable || !joinTable) return null;
+      
+      return {
+        id: Date.now() + index,
+        mainTableId: mainTable.id,
+        joinTableId: joinTable.id,
+        mainTableColumn: suggestion.sourceColumn,
+        joinTableColumn: suggestion.targetColumn,
+        joinType: suggestion.joinType + ' JOIN',
+      };
+    }).filter(Boolean);
+
+    if (newJoins.length > 0) {
+      setJoins(newJoins);
+      setSuggestedJoins([]);
+      
+      setNotification({
+        open: true,
+        message: `已应用 ${newJoins.length} 个连接建议`,
+        severity: 'success',
+      });
+    }
+  };
+
   const handleNext = () => {
+    // 表单验证
     if (selectedTables.length === 0) {
       setNotification({
         open: true,
@@ -270,261 +472,375 @@ function JoinTablesBuilder({ onNext, onBack }) {
       return;
     }
 
-    if (selectedTables.length > 1 && joins.length === 0) {
+    // 验证连接配置
+    const errors = {};
+    joins.forEach(join => {
+      if (!join.mainTableId) errors[`join_${join.id}_mainTableId`] = '请选择主表';
+      if (!join.joinTableId) errors[`join_${join.id}_joinTableId`] = '请选择关联表';
+      if (!join.mainTableColumn) errors[`join_${join.id}_mainTableColumn`] = '请选择主表列';
+      if (!join.joinTableColumn) errors[`join_${join.id}_joinTableColumn`] = '请选择关联表列';
+    });
+    
+    if (Object.keys(errors).length > 0) {
+      setErrors(errors);
       setNotification({
         open: true,
-        message: '多表查询需要设置JOIN条件',
+        message: '请完成所有连接配置',
         severity: 'error',
       });
       return;
     }
 
-    // 验证所有JOIN条件是否完整
-    const incompleteJoins = joins.filter(
-      join => !join.mainTableColumn || !join.joinTableColumn
-    );
-    
-    if (incompleteJoins.length > 0) {
-      setNotification({
-        open: true,
-        message: '请完成所有JOIN条件的设置',
-        severity: 'error',
-      });
-      return;
-    }
-
-    // 存储选择的表格和JOIN信息
-    const joinData = {
-      selectedTables,
-      joins,
-      sqlPreview
-    };
-    
-    localStorage.setItem('joinTablesData', JSON.stringify(joinData));
-    onNext();
+    // 将表格信息传递给父组件
+    const mainTable = selectedTables[0];
+    onConfigure(selectedTables, mainTable, joins);
   };
 
   const handleCloseNotification = () => {
     setNotification({ ...notification, open: false });
   };
 
+  const getDbTypeName = (type) => {
+    const dbTypes = {
+      mysql: 'MySQL',
+      postgresql: 'PostgreSQL',
+      sqlserver: 'SQL Server',
+      oracle: 'Oracle'
+    };
+    return dbTypes[type] || type;
+  };
+
   return (
     <Paper className={classes.root}>
-      <Typography variant="h5" gutterBottom>
-        多表关联设置
-      </Typography>
-
-      <div className={classes.searchContainer}>
-        <TextField
-          fullWidth
+      <div className={classes.header}>
+        <Typography variant="h5">
+          表格关联配置
+        </Typography>
+        <Button
           variant="outlined"
-          placeholder="搜索表格..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search />
-              </InputAdornment>
-            ),
-          }}
-        />
+          color="primary"
+          onClick={toggleJoinMode}
+        >
+          切换到单表模式
+        </Button>
       </div>
 
+      {connection && (
+        <Box className={classes.connectionInfo}>
+          <InfoIcon className={classes.connectionIcon} />
+          <div>
+            <Typography variant="subtitle2">
+              当前数据库连接
+            </Typography>
+            <Typography variant="body2">
+              {connection.name} ({getDbTypeName(connection.type)}) - {connection.host}:{connection.port}/{connection.database}
+            </Typography>
+          </div>
+        </Box>
+      )}
+
       <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
-          <Typography variant="h6" gutterBottom>
-            可用表格
+        {/* 左侧表格选择 */}
+        <Grid item xs={4}>
+          <Typography variant="subtitle1" gutterBottom>
+            选择表格
           </Typography>
-          <List>
-            {filteredTables.map((table) => (
-              <React.Fragment key={table.id}>
-                <ListItem
-                  button
-                  onClick={() => handleTableSelect(table)}
-                  disabled={selectedTables.some(t => t.id === table.id)}
-                >
-                  <ListItemText
-                    primary={
-                      <div style={{ display: 'flex', alignItems: 'center' }}>
-                        <TableChart style={{ marginRight: 8 }} />
-                        {table.name}
-                      </div>
-                    }
-                    secondary={table.description}
-                  />
-                  <ListItemSecondaryAction>
-                    <IconButton
-                      edge="end"
-                      aria-label="select"
+          
+          <div className={classes.searchContainer}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              size="small"
+              placeholder="搜索表格..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </div>
+
+          {isLoadingTables ? (
+            <div className={classes.loading}>
+              <CircularProgress />
+            </div>
+          ) : (
+            <Paper variant="outlined" className={classes.tableGrid}>
+              <List dense>
+                {filteredTables.map((table) => (
+                  <React.Fragment key={table.id}>
+                    <ListItem
+                      button
                       onClick={() => handleTableSelect(table)}
                       disabled={selectedTables.some(t => t.id === table.id)}
                     >
-                      <AddIcon />
-                    </IconButton>
-                  </ListItemSecondaryAction>
-                </ListItem>
-                <Divider />
-              </React.Fragment>
-            ))}
-          </List>
+                      <ListItemText
+                        primary={
+                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <TableChart style={{ marginRight: 8 }} fontSize="small" />
+                            {table.name}
+                          </div>
+                        }
+                        secondary={table.description || '无描述'}
+                      />
+                      <ListItemSecondaryAction>
+                        <IconButton
+                          edge="end"
+                          aria-label="select"
+                          onClick={() => handleTableSelect(table)}
+                          disabled={selectedTables.some(t => t.id === table.id)}
+                          size="small"
+                        >
+                          <AddIcon fontSize="small" />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                    <Divider />
+                  </React.Fragment>
+                ))}
+              </List>
+            </Paper>
+          )}
         </Grid>
 
-        <Grid item xs={12} md={6}>
-          <Typography variant="h6" gutterBottom>
+        {/* 右侧配置区域 */}
+        <Grid item xs={8}>
+          <Typography variant="subtitle1" gutterBottom>
             已选择的表格
           </Typography>
-          {selectedTables.length === 0 ? (
-            <Typography variant="body2" color="textSecondary">
-              还未选择任何表格
-            </Typography>
-          ) : (
-            <div className={classes.tablesContainer}>
-              {selectedTables.map((table, index) => (
-                <Paper key={table.id} className={classes.tableItem} variant="outlined">
-                  <ListItem>
-                    <ListItemText
-                      primary={
-                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                          <TableChart style={{ marginRight: 8 }} />
-                          {index === 0 ? `${table.name} (主表)` : table.name}
-                        </div>
-                      }
-                      secondary={table.description}
+
+          {selectedTables.length > 0 ? (
+            <Box mb={3}>
+              <Grid container spacing={1}>
+                {selectedTables.map((table) => (
+                  <Grid item key={table.id}>
+                    <Chip
+                      icon={<TableChart />}
+                      label={table.name}
+                      onDelete={() => handleRemoveTable(table.id)}
+                      color="primary"
+                      variant="outlined"
+                      className={classes.chip}
                     />
-                    <ListItemSecondaryAction>
-                      <IconButton
-                        edge="end"
-                        aria-label="remove"
-                        onClick={() => handleRemoveTable(table.id)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                </Paper>
-              ))}
-            </div>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          ) : (
+            <Typography variant="body2" color="textSecondary" paragraph>
+              请从左侧列表选择表格
+            </Typography>
           )}
 
           {selectedTables.length >= 2 && (
-            <div>
-              <Typography variant="h6" gutterBottom>
-                表连接设置
-                <Button
-                  variant="outlined"
-                  color="primary"
-                  size="small"
-                  startIcon={<AddIcon />}
-                  onClick={handleAddJoin}
-                  className={classes.addButton}
-                  style={{ marginLeft: 16 }}
-                >
-                  添加连接
-                </Button>
-              </Typography>
-
-              {joins.length === 0 ? (
-                <Typography variant="body2" color="textSecondary">
-                  未设置表连接
+            <>
+              <Box mt={3} mb={2} display="flex" justifyContent="space-between" alignItems="center">
+                <Typography variant="subtitle1">
+                  表格连接关系
                 </Typography>
-              ) : (
-                joins.map((join) => {
-                  const mainTable = selectedTables.find(t => t.id === join.mainTableId);
-                  const joinTable = selectedTables.find(t => t.id === join.joinTableId);
-                  
-                  if (!mainTable || !joinTable) return null;
-                  
-                  return (
-                    <div key={join.id} className={classes.joinContainer}>
-                      <Grid container spacing={2} alignItems="center">
-                        <Grid item xs={12} sm={3}>
-                          <FormControl fullWidth>
-                            <InputLabel>连接类型</InputLabel>
-                            <Select
-                              value={join.joinType}
-                              onChange={(e) => handleJoinChange(join.id, 'joinType', e.target.value)}
-                              className={classes.joinTypeSelect}
-                            >
-                              {joinTypes.map(type => (
-                                <MenuItem key={type} value={type}>
-                                  {type}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
-                        </Grid>
-                        <Grid item xs={12} sm={9}>
-                          <Typography variant="body2" align="center">
-                            {mainTable.name} <LinkIcon /> {joinTable.name}
-                          </Typography>
-                        </Grid>
-                        <Grid item xs={12} sm={5}>
-                          <FormControl fullWidth>
-                            <InputLabel>{mainTable.name}表字段</InputLabel>
-                            <Select
-                              value={join.mainTableColumn || ''}
-                              onChange={(e) => handleJoinChange(join.id, 'mainTableColumn', e.target.value)}
-                              className={classes.columnSelect}
-                            >
-                              {mainTable.columns.map(column => (
-                                <MenuItem key={column.id} value={column.id}>
-                                  {column.name} ({column.type})
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
-                        </Grid>
-                        <Grid item xs={12} sm={2} container justifyContent="center">
-                          <Typography>=</Typography>
-                        </Grid>
-                        <Grid item xs={12} sm={5}>
-                          <FormControl fullWidth>
-                            <InputLabel>{joinTable.name}表字段</InputLabel>
-                            <Select
-                              value={join.joinTableColumn || ''}
-                              onChange={(e) => handleJoinChange(join.id, 'joinTableColumn', e.target.value)}
-                              className={classes.columnSelect}
-                            >
-                              {joinTable.columns.map(column => (
-                                <MenuItem key={column.id} value={column.id}>
-                                  {column.name} ({column.type})
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
-                        </Grid>
-                        <Grid item xs={12} container justifyContent="flex-end">
-                          <Button
-                            variant="outlined"
-                            color="secondary"
-                            size="small"
-                            startIcon={<DeleteIcon />}
-                            onClick={() => handleRemoveJoin(join.id)}
-                          >
-                            移除连接
-                          </Button>
-                        </Grid>
-                      </Grid>
-                    </div>
-                  );
-                })
+                <Box>
+                  <Button
+                    size="small"
+                    startIcon={<AutorenewIcon />}
+                    color="primary"
+                    onClick={suggestJoins}
+                    disabled={isSuggestingJoins || selectedTables.length < 2}
+                    className={classes.suggestJoinButton}
+                  >
+                    {isSuggestingJoins ? "推荐中..." : "自动推荐连接"}
+                  </Button>
+                  <Button
+                    size="small"
+                    startIcon={<AddIcon />}
+                    color="primary"
+                    onClick={handleAddJoin}
+                    className={classes.suggestJoinButton}
+                  >
+                    添加连接
+                  </Button>
+                </Box>
+              </Box>
+
+              {suggestedJoins.length > 0 && (
+                <Box mt={2} mb={3} p={2} border={1} borderColor="divider" borderRadius="borderRadius">
+                  <Typography variant="subtitle2" gutterBottom>
+                    推荐的连接关系
+                  </Typography>
+                  <List dense>
+                    {suggestedJoins.map((suggestion, index) => (
+                      <ListItem key={index}>
+                        <ListItemText
+                          primary={
+                            <span>
+                              {suggestion.sourceTable}.{suggestion.sourceColumn} = {suggestion.targetTable}.{suggestion.targetColumn}
+                              <span className={classes.joinSuggestionConfidence}>
+                                (置信度: {(suggestion.confidence * 100).toFixed(0)}%)
+                              </span>
+                            </span>
+                          }
+                          secondary={`推荐连接类型: ${suggestion.joinType} JOIN`}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    size="small"
+                    onClick={applySuggestedJoins}
+                    style={{ marginTop: 8 }}
+                  >
+                    应用推荐
+                  </Button>
+                </Box>
               )}
-            </div>
+
+              <TableContainer component={Paper} variant="outlined">
+                <Table className={classes.joinTable} size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>连接类型</TableCell>
+                      <TableCell>主表.列</TableCell>
+                      <TableCell align="center">=</TableCell>
+                      <TableCell>关联表.列</TableCell>
+                      <TableCell align="right">操作</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {joins.map((join) => {
+                      const mainTable = selectedTables.find(t => t.id === join.mainTableId);
+                      const joinTable = selectedTables.find(t => t.id === join.joinTableId);
+                      
+                      return (
+                        <TableRow key={join.id}>
+                          <TableCell>
+                            <FormControl size="small" fullWidth>
+                              <Select
+                                value={join.joinType}
+                                onChange={(e) => handleJoinChange(join.id, 'joinType', e.target.value)}
+                              >
+                                {joinTypes.map(type => (
+                                  <MenuItem key={type} value={type}>
+                                    {type}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                          </TableCell>
+                          <TableCell>
+                            <Grid container spacing={1}>
+                              <Grid item xs={6}>
+                                <FormControl fullWidth size="small" error={!!errors[`join_${join.id}_mainTableId`]}>
+                                  <Select
+                                    value={join.mainTableId || ''}
+                                    onChange={(e) => {
+                                      handleJoinChange(join.id, 'mainTableId', e.target.value);
+                                      handleJoinChange(join.id, 'mainTableColumn', null);
+                                    }}
+                                  >
+                                    {selectedTables.map(table => (
+                                      <MenuItem key={table.id} value={table.id}>
+                                        {table.name}
+                                      </MenuItem>
+                                    ))}
+                                  </Select>
+                                  {errors[`join_${join.id}_mainTableId`] && (
+                                    <FormHelperText>{errors[`join_${join.id}_mainTableId`]}</FormHelperText>
+                                  )}
+                                </FormControl>
+                              </Grid>
+                              <Grid item xs={6}>
+                                <FormControl fullWidth size="small" error={!!errors[`join_${join.id}_mainTableColumn`]}>
+                                  <Select
+                                    value={join.mainTableColumn || ''}
+                                    onChange={(e) => handleJoinChange(join.id, 'mainTableColumn', e.target.value)}
+                                    disabled={!join.mainTableId}
+                                  >
+                                    {mainTable?.columns?.map(column => (
+                                      <MenuItem key={column.id} value={column.name}>
+                                        {column.name}
+                                      </MenuItem>
+                                    ))}
+                                  </Select>
+                                  {errors[`join_${join.id}_mainTableColumn`] && (
+                                    <FormHelperText>{errors[`join_${join.id}_mainTableColumn`]}</FormHelperText>
+                                  )}
+                                </FormControl>
+                              </Grid>
+                            </Grid>
+                          </TableCell>
+                          <TableCell align="center">=</TableCell>
+                          <TableCell>
+                            <Grid container spacing={1}>
+                              <Grid item xs={6}>
+                                <FormControl fullWidth size="small" error={!!errors[`join_${join.id}_joinTableId`]}>
+                                  <Select
+                                    value={join.joinTableId || ''}
+                                    onChange={(e) => {
+                                      handleJoinChange(join.id, 'joinTableId', e.target.value);
+                                      handleJoinChange(join.id, 'joinTableColumn', null);
+                                    }}
+                                  >
+                                    {selectedTables.map(table => (
+                                      <MenuItem key={table.id} value={table.id}>
+                                        {table.name}
+                                      </MenuItem>
+                                    ))}
+                                  </Select>
+                                  {errors[`join_${join.id}_joinTableId`] && (
+                                    <FormHelperText>{errors[`join_${join.id}_joinTableId`]}</FormHelperText>
+                                  )}
+                                </FormControl>
+                              </Grid>
+                              <Grid item xs={6}>
+                                <FormControl fullWidth size="small" error={!!errors[`join_${join.id}_joinTableColumn`]}>
+                                  <Select
+                                    value={join.joinTableColumn || ''}
+                                    onChange={(e) => handleJoinChange(join.id, 'joinTableColumn', e.target.value)}
+                                    disabled={!join.joinTableId}
+                                  >
+                                    {joinTable?.columns?.map(column => (
+                                      <MenuItem key={column.id} value={column.name}>
+                                        {column.name}
+                                      </MenuItem>
+                                    ))}
+                                  </Select>
+                                  {errors[`join_${join.id}_joinTableColumn`] && (
+                                    <FormHelperText>{errors[`join_${join.id}_joinTableColumn`]}</FormHelperText>
+                                  )}
+                                </FormControl>
+                              </Grid>
+                            </Grid>
+                          </TableCell>
+                          <TableCell align="right">
+                            <IconButton size="small" onClick={() => handleRemoveJoin(join.id)}>
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
           )}
+
+          {/* SQL预览 */}
+          <Box mt={3}>
+            <Typography variant="subtitle1" gutterBottom>
+              SQL预览
+            </Typography>
+            <Paper variant="outlined" className={classes.preview}>
+              <pre>{sqlPreview}</pre>
+            </Paper>
+          </Box>
         </Grid>
       </Grid>
-
-      {sqlPreview && (
-        <div>
-          <Typography variant="h6" gutterBottom>
-            SQL预览
-          </Typography>
-          <pre className={classes.preview}>
-            {sqlPreview}
-          </pre>
-        </div>
-      )}
 
       <div className={classes.buttonContainer}>
         <Button

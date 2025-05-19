@@ -29,6 +29,8 @@ import { Alert } from '@material-ui/lab';
 import { ArrowBack, ArrowForward, Add as AddIcon, Delete as DeleteIcon } from '@material-ui/icons';
 import CategoryCascader from './CategoryCascader';
 import { apiCategories } from '../constants/apiCategories';
+import { convertJoinDataToApiBuilder } from '../utils/apiBuilderAdapter';
+import apiBuilderService from '../services/ApiBuilderService';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -312,60 +314,115 @@ function ApiBuilder({ onNext, onBack }) {
     let sqlQuery = '';
     let tableInfo = {};
 
-    if (joinMode && joinData) {
-      // 多表模式
-      sqlQuery = joinData.sqlPreview;
-      tableInfo = {
-        joinMode: true,
-        tables: joinData.selectedTables.map(t => t.name).join(', '),
-        joinData: joinData
+    try {
+      if (joinMode && joinData) {
+        // 多表模式 - 使用适配器转换连接数据
+        const apiBuilder = convertJoinDataToApiBuilder(
+          apiConfig.name,
+          apiConfig.description,
+          joinData,
+          apiConfig.selectedColumns
+        );
+        
+        // 验证API配置
+        const validation = apiBuilder.validateConfig();
+        if (!validation.isValid) {
+          setNotification({
+            open: true,
+            message: `API配置无效: ${validation.errors.join(', ')}`,
+            severity: 'error',
+          });
+          return;
+        }
+
+        // 生成SQL查询
+        sqlQuery = apiBuilder.generateSql();
+        
+        // 表信息
+        tableInfo = {
+          joinMode: true,
+          tables: joinData.selectedTables.map(t => t.name).join(', '),
+          joinData: joinData,
+          apiBuilderConfig: apiBuilder.apiConfig
+        };
+      } else {
+        // 单表模式
+        const selectedTable = JSON.parse(localStorage.getItem('selectedTable')) || { name: 'default_table' };
+        
+        // 初始化API构建器
+        apiBuilderService.initApiConfig(
+          apiConfig.name,
+          'query',
+          apiConfig.description,
+          selectedTable.name
+        );
+        
+        // 准备字段列表
+        const fields = apiConfig.selectedColumns
+          .map(id => {
+            const column = availableColumns.find(col => col.id === id);
+            if (!column) return null;
+            
+            return {
+              table: column.tableName || selectedTable.name,
+              name: column.columnName,
+              alias: column.alias || null,
+              type: column.type || 'string'
+            };
+          })
+          .filter(Boolean);
+        
+        // 添加字段到API配置
+        apiBuilderService.addFields(fields);
+        
+        // 生成SQL查询
+        sqlQuery = apiBuilderService.generateSql();
+        
+        // 表信息
+        tableInfo = {
+          joinMode: false,
+          table: selectedTable.name,
+          apiBuilderConfig: apiBuilderService.apiConfig
+        };
+      }
+
+      const apiData = {
+        ...apiConfig,
+        ...tableInfo,
+        sqlQuery,
+        createdAt: new Date().toISOString(),
       };
-    } else {
-      // 单表模式
-      const selectedTable = JSON.parse(localStorage.getItem('selectedTable')) || { name: 'default_table' };
-      const selectedColumnNames = apiConfig.selectedColumns
-        .map(id => {
-          const column = availableColumns.find(col => col.id === id);
-          return column ? column.name : null;
-        })
-        .filter(Boolean)
-        .join(', ');
-      sqlQuery = `SELECT ${selectedColumnNames} FROM ${selectedTable.name}`;
-      tableInfo = {
-        joinMode: false,
-        table: selectedTable.name
-      };
+
+      const existingApis = JSON.parse(localStorage.getItem('apis') || '[]');
+      localStorage.setItem('apis', JSON.stringify([...existingApis, apiData]));
+
+      // 保存API血缘关系数据
+      if (apiConfig.upstreamSystems && apiConfig.upstreamSystems.length > 0) {
+        const lineageData = {
+          upstream: apiConfig.upstreamSystems,
+          downstream: [],
+          users: [],
+        };
+        localStorage.setItem(`apiLineage_${apiData.id}`, JSON.stringify(lineageData));
+      }
+
+      setNotification({
+        open: true,
+        message: 'API 创建成功！',
+        severity: 'success',
+      });
+
+      setTimeout(() => {
+        onNext();
+      }, 1000);
+    } catch (error) {
+      console.error('API创建失败:', error);
+      setNotification({
+        open: true,
+        message: `API创建失败: ${error.message}`,
+        severity: 'error',
+      });
     }
-
-    const apiData = {
-      ...apiConfig,
-      ...tableInfo,
-      sqlQuery,
-      createdAt: new Date().toISOString(),
-    };
-
-    const existingApis = JSON.parse(localStorage.getItem('apis') || '[]');
-    localStorage.setItem('apis', JSON.stringify([...existingApis, apiData]));
-
-    // 保存API血缘关系数据
-    if (apiConfig.upstreamSystems && apiConfig.upstreamSystems.length > 0) {
-      const lineageData = {
-        upstream: apiConfig.upstreamSystems,
-        downstream: [],
-        users: [],
-      };
-      localStorage.setItem(`apiLineage_${apiData.id}`, JSON.stringify(lineageData));
-    }
-
-    setNotification({
-      open: true,
-      message: 'API 创建成功！',
-      severity: 'success',
-    });
-
-    setTimeout(() => {
-      onNext();
-    }, 1000);
   };
 
   const handleCloseNotification = () => {

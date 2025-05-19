@@ -46,10 +46,18 @@ import {
   Settings as SettingsIcon,
   Person as PersonIcon,
   Check as CheckIcon,
-  Group as GroupIcon
+  Group as GroupIcon,
+  Storage as DatasetIcon,
+  Assessment as AnalyticsIcon,
+  Assignment as OrderIcon,
+  SupervisorAccount as AdminIcon,
+  CheckCircle as ReviewIcon
 } from '@material-ui/icons';
 import { useLocation, useHistory } from 'react-router-dom';
 import clsx from 'clsx';
+import { useFeatureFlags } from '../../contexts/FeatureFlagContext';
+import FeatureGuard from '../FeatureGuard';
+import MarketSwitcher from '../MarketSwitcher';
 
 // 引入自定义hook
 import useI18n from '../../hooks/useI18n';
@@ -294,6 +302,12 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: colorPalette.black.light,
     margin: theme.spacing(1, 0),
   },
+  grow: {
+    flexGrow: 1,
+  },
+  langSwitcher: {
+    marginLeft: theme.spacing(2),
+  },
 }));
 
 function Layout({ children }) {
@@ -305,34 +319,79 @@ function Layout({ children }) {
   const dispatch = useDispatch();
   const { translate, changeLanguage, currentLanguage, LOCALES } = useI18n();
   const { checkPermission, isAdmin } = usePermission();
+  const { isModuleEnabled, MODULES } = useFeatureFlags();
   
   // Redux状态
   const drawerOpen = useSelector(state => state.ui.drawerOpen);
   const notifications = useSelector(selectNotifications);
   const unseenCount = useSelector(selectUnseenCount);
+  const categories = useSelector(state => state.api.categories || []);
   
   const [anchorEl, setAnchorEl] = useState(null);
   const [languageAnchorEl, setLanguageAnchorEl] = useState(null);
   const [notificationAnchorEl, setNotificationAnchorEl] = useState(null);
+  const [expandedCategories, setExpandedCategories] = useState({});
   
   // 菜单配置
   const menuItems = [
-    { text: translate('menu.home'), icon: <HomeIcon />, path: '/' },
-    { text: translate('menu.apiCatalog'), icon: <CatalogIcon />, path: '/catalog' },
-    { text: translate('menu.lowCode'), icon: <LowCodeIcon />, path: '/lowcode' },
-    { text: translate('menu.categorySelector'), icon: <CategoryIcon />, path: '/category-demo' },
-    // 首页变体作为子菜单
-    { text: translate('menu.marketingHome'), icon: <HomeIcon />, path: '/marketing' },
-    { text: translate('menu.developerHome'), icon: <HomeIcon />, path: '/developer' },
+    { text: '首页', icon: <HomeIcon />, path: '/' },
+    { 
+      text: 'API管理', 
+      icon: <ApiIcon />, 
+      path: '/catalog',
+      description: '浏览和管理所有API',
+      module: MODULES.API_MANAGEMENT
+    },
+    { 
+      text: '数据集', 
+      icon: <DatasetIcon />, 
+      path: '/datasets',
+      description: '管理可用于创建API的数据集',
+      module: MODULES.DATASET_MANAGEMENT
+    },
+    { 
+      text: '低代码构建器', 
+      icon: <LowCodeIcon />, 
+      path: '/lowcode',
+      description: '使用低代码方式创建API',
+      module: MODULES.LOWCODE_BUILDER
+    },
+    { 
+      text: '审核与订单', 
+      icon: <OrderIcon />, 
+      path: '/review-orders',
+      description: '处理API审核请求和管理订阅订单',
+      module: MODULES.REVIEW_ORDERS
+    },
+    { 
+      text: '统计分析', 
+      icon: <AnalyticsIcon />, 
+      path: '/analytics',
+      description: 'API使用统计和性能分析',
+      module: MODULES.ANALYTICS
+    },
   ];
+
+  // 过滤掉当前市场不支持的模块
+  const filteredMenuItems = menuItems.filter(item => 
+    !item.module || isModuleEnabled(item.module)
+  );
 
   // 权限管理菜单
   const adminMenuItems = [
     { 
-      text: translate('menu.userManagement'), 
+      text: '管理控制台', 
+      icon: <AdminIcon />, 
+      path: '/admin',
+      permission: 'admin_view',
+      description: '平台管理与配置' 
+    },
+    { 
+      text: '用户与权限', 
       icon: <PersonIcon />, 
       path: '/admin/users',
-      permission: 'user_view'
+      permission: 'user_view',
+      description: '管理用户、团队和权限' 
     }
   ];
 
@@ -413,6 +472,39 @@ function Layout({ children }) {
     }
     return location.pathname.startsWith(path);
   };
+
+  // 处理分类选择
+  const handleCategorySelect = (category) => {
+    const categoryId = category.id || category.value;
+    const categoryName = category.name || category.label;
+    
+    // 切换当前分类的展开状态
+    setExpandedCategories(prev => ({
+      ...prev,
+      [categoryId]: !prev[categoryId]
+    }));
+    
+    // 这里可以添加额外的分类选择逻辑，如过滤API列表等
+  };
+
+  // 点击左侧菜单，处理导航
+  const handleAdminNavigate = (path, permission) => {
+    if (!permission || checkPermission(permission) || isAdmin()) {
+      history.push(path);
+    } else {
+      history.push('/unauthorized');
+    }
+  };
+
+  useEffect(() => {
+    // 初始化展开状态，默认展开根级分类
+    const defaultExpanded = {};
+    categories.forEach(category => {
+      const categoryId = category.id || category.value;
+      defaultExpanded[categoryId] = true;
+    });
+    setExpandedCategories(defaultExpanded);
+  }, [categories]); // 只在categories变化时执行
 
   return (
     <div className={classes.root}>
@@ -528,6 +620,9 @@ function Layout({ children }) {
                 </Button>
               </Box>
             </Popover>
+            
+            {/* 添加市场切换器 */}
+            <MarketSwitcher />
             
             {/* 国际化切换 */}
             <Tooltip title={translate('header.language')}>
@@ -697,7 +792,7 @@ function Layout({ children }) {
         </div>
         <Divider />
         <List>
-          {menuItems.map((item, index) => (
+          {filteredMenuItems.map((item) => (
             <ListItem 
               button 
               key={item.text}
@@ -707,7 +802,26 @@ function Layout({ children }) {
               })}
             >
               <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} className={classes.listItemText} />
+              <ListItemText 
+                primary={item.text} 
+                secondary={drawerOpen && item.description ? item.description : null}
+                primaryTypographyProps={{ 
+                  className: classes.listItemText,
+                  style: { fontWeight: isActive(item.path) ? 600 : 400 }
+                }}
+                secondaryTypographyProps={{
+                  style: { 
+                    fontSize: '0.7rem', 
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    lineHeight: 1.2,
+                  }
+                }}
+              />
             </ListItem>
           ))}
         </List>
@@ -717,14 +831,33 @@ function Layout({ children }) {
             <ListItem 
               button 
               key={item.text}
-              onClick={() => handleNavigate(item.path)}
+              onClick={() => handleAdminNavigate(item.path, item.permission)}
               className={clsx(classes.listItem, {
                 [classes.activeListItem]: isActive(item.path)
               })}
-              disabled={item.permission && !checkPermission(item.permission)}
+              disabled={item.permission && !checkPermission(item.permission) && !isAdmin()}
             >
               <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} className={classes.listItemText} />
+              <ListItemText 
+                primary={item.text} 
+                secondary={drawerOpen && item.description ? item.description : null}
+                primaryTypographyProps={{ 
+                  className: classes.listItemText,
+                  style: { fontWeight: isActive(item.path) ? 600 : 400 }
+                }}
+                secondaryTypographyProps={{
+                  style: { 
+                    fontSize: '0.7rem', 
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    lineHeight: 1.2,
+                  }
+                }}
+              />
             </ListItem>
           ))}
         </List>
