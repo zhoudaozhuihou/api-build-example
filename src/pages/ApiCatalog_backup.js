@@ -1,95 +1,79 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   makeStyles, 
   Paper, 
+  Grid, 
   Typography, 
-  Container, 
-  Grid,
+  InputBase, 
+  Card, 
+  CardContent,
+  Divider,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Collapse,
+  IconButton,
+  Box,
+  Container,
+  Chip,
+  FormControl,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
+  Select,
+  MenuItem,
+  InputLabel,
   TextField,
   Button,
-  Chip,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Menu,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogContentText,
   DialogActions,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
-  Box,
-  Card,
-  CardContent,
   Tooltip,
-  InputBase,
-  useTheme,
-  useMediaQuery,
-  Badge,
-  Fade,
-  Collapse,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  Menu,
-  MenuItem,
-  Backdrop,
-  FormControl,
-  InputLabel,
-  Select,
-  Divider,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Avatar,
-  LinearProgress,
-  Switch
+  Switch,
+  Fade
 } from '@material-ui/core';
-import { Pagination, TreeView, TreeItem } from '@material-ui/lab';
+import { Pagination } from '@material-ui/lab';
+import { TreeView, TreeItem } from '@material-ui/lab';
 import { 
   Search as SearchIcon, 
-  Visibility as VisibilityIcon,
+  ExpandMore, 
+  ExpandLess,
+  Code as CodeIcon,
+  Http as HttpIcon,
+  FilterList as FilterListIcon,
+  Clear as ClearIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Add as AddIcon,
-  CloudUpload as CloudUploadIcon,
-  GetApp as GetAppIcon,
   MoreVert as MoreVertIcon,
-  AccountTree as AccountTreeIcon,
-  FilterList as FilterListIcon,
-  Category as CategoryIcon,
-  Http as HttpIcon,
-  Description as DescriptionIcon,
-  Public as PublicIcon,
-  Security as SecurityIcon,
-  VpnLock as VpnLockIcon,
-  Clear as ClearIcon,
-  Launch as LaunchIcon,
-  PeopleAlt as PeopleAltIcon,
-  Business as BusinessIcon,
-  Group as GroupIcon,
-  Code as CodeIcon,
-  ExpandMore as ExpandMoreIcon,
-  ChevronRight as ChevronRightIcon,
-  ExpandLess as ExpandLessIcon,
-  ExpandMore as ExpandMoreIconCollapse,
-  BookmarkBorder as BookmarkBorderIcon,
-  Bookmark as BookmarkIcon,
-  Tune as TuneIcon,
-  Timeline as TimelineIcon,
-  Timeline as LineageIcon,
+  Settings as SettingsIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
   AccessTime as AccessTimeIcon,
+  Update as UpdateIcon,
+  Label as LabelIcon,
+  CategoryOutlined as CategoryOutlinedIcon,
+  CloudUpload as UploadIcon,
+  Share as ShareIcon,
+  AccountTree as LineageIcon,
   Event as EventIcon,
   Person as PersonIcon,
-  CategoryOutlined as CategoryOutlinedIcon,
-  Label as LabelIcon,
-  Group as TeamIcon
+  PeopleAlt as PeopleIcon,
+  Group as TeamIcon,
+  Done as DoneIcon,
+  ArrowBack as ArrowBackIcon,
+  GetApp as GetAppIcon,
+  Category as CategoryIcon,
+  CloudUpload as CloudUploadIcon,
+  ChevronRight as ChevronRightIcon
 } from '@material-ui/icons';
-import ApiTotalStats from '../components/ApiTotalStats';
-import ApiFilter from '../components/ApiFilter';
 import { apiCategories } from '../constants/apiCategories';
 import ApiLineage from '../components/ApiLineage';
 import ApiImportDialog from '../components/ApiImportDialog';
@@ -120,7 +104,6 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: 0,
     position: 'relative',
     overflow: 'hidden',
-    margin: '0 auto',
     boxShadow: theme.shadows[10],
     '&::before': {
       content: '""',
@@ -176,7 +159,6 @@ const useStyles = makeStyles((theme) => ({
     boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
     transition: 'all 0.3s ease',
     overflow: 'hidden',
-    margin: '0 auto',
     '&:hover': {
       boxShadow: '0 15px 30px rgba(0,0,0,0.3)',
       transform: 'translateY(-2px)',
@@ -245,16 +227,16 @@ const useStyles = makeStyles((theme) => ({
     flexDirection: 'column',
     overflow: 'hidden',
     border: '1px solid rgba(0,0,0,0.05)',
-    height: 'fit-content',
-    minWidth: '280px',
+    height: '100%',
+    minWidth: '280px', // 确保面板有足够的最小宽度
     position: 'sticky',
     top: theme.spacing(3),
-    maxHeight: 'calc(100vh - 200px)',
+    maxHeight: 'calc(100vh - 100px)', // 设置最大高度
   },
   rightPanel: {
     width: '100%',
     paddingBottom: theme.spacing(4),
-    minHeight: 'calc(100vh - 100px)', // 设置最小高
+    minHeight: 'calc(100vh - 100px)', // 设置最小高度
   },
   nestedItem: {
     paddingLeft: theme.spacing(4),
@@ -304,7 +286,6 @@ const useStyles = makeStyles((theme) => ({
     transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
     borderRadius: theme.shape.borderRadius * 1.5,
     overflow: 'hidden',
-    margin: '0 auto',
     border: '1px solid rgba(0,0,0,0.08)',
     backgroundColor: theme.palette.background.paper,
     position: 'relative',
@@ -353,7 +334,6 @@ const useStyles = makeStyles((theme) => ({
     '-webkit-line-clamp': 1,
     '-webkit-box-orient': 'vertical',
     overflow: 'hidden',
-    margin: '0 auto',
     textOverflow: 'ellipsis',
   },
   apiDescription: {
@@ -362,9 +342,8 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(2),
     padding: theme.spacing(0, 0),
     lineHeight: 1.6,
-    height: '3.2em', // 固定高度，相当于2行文
+    height: '3.2em', // 固定高度，相当于2行文字
     overflow: 'hidden',
-    margin: '0 auto',
     textOverflow: 'ellipsis',
     display: '-webkit-box',
     '-webkit-line-clamp': 2,
@@ -376,8 +355,7 @@ const useStyles = makeStyles((theme) => ({
     flexGrow: 1,
     display: 'flex',
     flexDirection: 'column',
-    overflow: 'hidden',
-    margin: '0 auto', // 防止内容溢出
+    overflow: 'hidden', // 防止内容溢出
   },
   apiEndpointsContainer: {
     padding: theme.spacing(0, 2),
@@ -385,7 +363,6 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(1.5),
     maxHeight: '70px',
     overflow: 'hidden',
-    margin: '0 auto',
     '&:hover': {
       maxHeight: '90px',
       overflow: 'auto',
@@ -607,7 +584,7 @@ const useStyles = makeStyles((theme) => ({
     overflowY: 'auto',
     scrollbarWidth: 'thin',
     borderTop: `1px solid ${theme.palette.divider}`,
-    padding: theme.spacing(0, 0.5),
+    padding: theme.spacing(0, 0.5), // 给TreeView两侧留出空间
     '&::-webkit-scrollbar': {
       width: '6px',
     },
@@ -785,9 +762,8 @@ const useStyles = makeStyles((theme) => ({
     display: 'flex',
     flexWrap: 'wrap',
     gap: theme.spacing(0.5),
-    maxWidth: '70%', // 限制分类标签的宽
+    maxWidth: '70%', // 限制分类标签的宽度
     overflow: 'hidden',
-    margin: '0 auto',
   },
   apiCardActions: {
     display: 'flex',
@@ -798,6 +774,7 @@ const useStyles = makeStyles((theme) => ({
     padding: 4,
   },
   categoryChip: {
+    margin: theme.spacing(0.5, 0.5, 0, 0),
     fontSize: '0.7rem',
     borderRadius: '4px',
     backgroundColor: 'rgba(0,0,0,0.04)',
@@ -805,7 +782,6 @@ const useStyles = makeStyles((theme) => ({
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
-    margin: theme.spacing(0.5, 0.5, 0, 0),
   },
   methodChip: {
     borderRadius: '12px',
@@ -864,6 +840,23 @@ const useStyles = makeStyles((theme) => ({
   categoryListTitle: {
     fontSize: '1rem',
     fontWeight: 600,
+  },
+  categoryItem: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: theme.spacing(0.75, 2),
+    borderRadius: 0,
+    borderLeft: '3px solid transparent',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      backgroundColor: 'rgba(25, 118, 210, 0.04)',
+      borderLeftColor: theme.palette.primary.light,
+    },
+  },
+  selectedItem: {
+    backgroundColor: 'rgba(25, 118, 210, 0.08)',
+    borderLeft: `3px solid ${theme.palette.primary.main}`,
   },
   categoryTree: {
     padding: 0,
@@ -963,7 +956,6 @@ const useStyles = makeStyles((theme) => ({
       '& span': {
         whiteSpace: 'nowrap',
         overflow: 'hidden',
-    margin: '0 auto',
         textOverflow: 'ellipsis',
       },
     },
@@ -1016,13 +1008,12 @@ const useStyles = makeStyles((theme) => ({
         maxWidth: '180px',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
-    margin: '0 auto',
         textOverflow: 'ellipsis',
         display: 'inline-block',
       },
     },
   },
-  // 增强API卡片标签区域的样
+  // 增强API卡片标签区域的样式
   apiCardTagsContainer: {
     display: 'flex',
     flexDirection: 'column',
@@ -1032,7 +1023,6 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(0, 3),
     maxHeight: '85px',
     overflow: 'hidden',
-    margin: '0 auto',
   },
   apiTagsRow: {
     display: 'flex',
@@ -1060,7 +1050,6 @@ const useStyles = makeStyles((theme) => ({
     '& .MuiChip-label': {
       padding: theme.spacing(0, 0.8),
       overflow: 'hidden',
-    margin: '0 auto',
       textOverflow: 'ellipsis',
       whiteSpace: 'nowrap',
     },
@@ -1090,29 +1079,6 @@ const useStyles = makeStyles((theme) => ({
   addRootCategoryButton: {
     marginTop: theme.spacing(1),
     marginBottom: theme.spacing(2),
-  },
-  rightPanelHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: theme.spacing(1, 2),
-    backgroundColor: theme.palette.background.default,
-    borderBottom: `1px solid ${theme.palette.divider}`,
-  },
-  rightPanelTitle: {
-    fontSize: '1.2rem',
-    fontWeight: 600,
-  },
-  rightPanelStats: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: theme.spacing(1),
-  },
-  rightPanelStatChip: {
-    fontSize: '0.8rem',
-    fontWeight: 500,
-    padding: theme.spacing(0.5, 1),
-    borderRadius: theme.shape.borderRadius,
   },
 }));
 
@@ -1187,9 +1153,9 @@ const allApiMethods = [...new Set(mockApis.flatMap(api => api.method.split('/'))
 const responseTimeRanges = [
   { label: '全部', value: 'all' },
   { label: '极快 (< 50ms)', value: 'very-fast', max: 50 },
-  { label: '快(50-100ms)', value: 'fast', min: 50, max: 100 },
+  { label: '快速 (50-100ms)', value: 'fast', min: 50, max: 100 },
   { label: '中等 (100-150ms)', value: 'medium', min: 100, max: 150 },
-  { label: '慢(> 150ms)', value: 'slow', min: 150 }
+  { label: '慢速 (> 150ms)', value: 'slow', min: 150 }
 ];
 
 const ApiCatalog = () => {
@@ -1198,11 +1164,9 @@ const ApiCatalog = () => {
   const [expandedCategories, setExpandedCategories] = useState({});
   const [selectedApi, setSelectedApi] = useState(null);
   const [filteredApis, setFilteredApis] = useState(mockApis);
-  const [categories, setCategories] = useState(apiCategories);
-  
   // 分页相关状态
   const [page, setPage] = useState(1);
-  const [rowsPerPage] = useState(10); // 固定为每页10条
+  const [rowsPerPage] = useState(10); // 固定为每页10个
   
   // 新增分类筛选状态
   const [accessLevelFilter, setAccessLevelFilter] = useState(null);
@@ -1216,12 +1180,12 @@ const ApiCatalog = () => {
     industry: false
   });
   
-  // 处理开放等级筛选变化
+  // 处理开放等级筛选变更
   const handleAccessLevelFilterChange = (level) => {
     setAccessLevelFilter(accessLevelFilter === level ? null : level);
   };
   
-  // 处理分类筛选变化
+  // 处理分类筛选变更
   const handleFilterChange = (filter, filterType) => {
     let currentFilters;
     let setFilters;
@@ -1252,24 +1216,6 @@ const ApiCatalog = () => {
     } else {
       setFilters([...currentFilters, filter]);
     }
-  };
-  
-  // 处理方法筛选变化
-  const handleMethodFilterChange = (method) => {
-    setMethodFilters(prev => ({ ...prev, [method]: !prev[method] }));
-  };
-  
-  // 处理清除所有筛选器
-  const handleClearAllFilters = () => {
-    setAccessLevelFilter(null);
-    setDataFieldFilters([]);
-    setThemeFilters([]);
-    setServiceFilters([]);
-    setIndustryFilters([]);
-    setMethodFilters({});
-    setResponseTimeFilter('all');
-    setStartDate('');
-    setEndDate('');
   };
   
   // 切换筛选部分展开状态
@@ -1332,7 +1278,7 @@ const ApiCatalog = () => {
           let sampleLineageData = {};
           
           switch(index % 5) {
-            case 0: // 第一种模式 复杂依赖关系
+            case 0: // 第一种模式: 复杂依赖关系
               sampleLineageData = {
                 upstream: [
                   { id: 1, name: '用户认证服务', description: '提供用户登录和验证功能' },
@@ -1345,14 +1291,14 @@ const ApiCatalog = () => {
                   { id: 2, name: '支付网关', description: '处理付款流程' },
                   { id: 3, name: '客户管理系统', description: '管理客户信息与关系' },
                   { id: 4, name: '通知服务', description: '发送系统通知和提醒' },
-                  { id: 5, name: '分析仪表板', description: '业务数据可视化' }
+                  { id: 5, name: '分析仪表盘', description: '业务数据可视化' }
                 ],
                 users: [
                   { id: 1, name: '张三', role: '开发工程师', department: '研发部' },
                   { id: 2, name: '李四', role: '产品经理', department: '产品部' },
                   { id: 3, name: '王五', role: '测试工程师', department: '测试部' },
-                  { id: 4, name: '赵六', role: '前端开发工程师', department: '研发部' },
-                  { id: 5, name: '产品团队', role: '产品经理', department: '产品部' }
+                  { id: 4, name: '赵六', role: '前端开发', department: '研发部' },
+                  { id: 5, name: '产品团队', role: '产品团队', department: '产品部' }
                 ],
                 // 新增字段：上游系统之间的关系
                 upstreamRelations: [
@@ -1370,7 +1316,7 @@ const ApiCatalog = () => {
               };
               break;
               
-            case 1: // 第二种模式 服务网格
+            case 1: // 第二种模式: 服务网格
               sampleLineageData = {
                 upstream: [
                   { id: 1, name: '网关服务', description: 'API网关' },
@@ -1383,8 +1329,8 @@ const ApiCatalog = () => {
                   { id: 3, name: '推荐引擎', description: '智能推荐系统' }
                 ],
                 users: [
-                  { id: 1, name: '移动团队', role: '开发工程师', department: '移动部门' },
-                  { id: 2, name: '网站团队', role: '开发工程师', department: '网站部门' }
+                  { id: 1, name: '移动团队', role: '开发团队', department: '移动部门' },
+                  { id: 2, name: '网站团队', role: '开发团队', department: '网站部门' }
                 ],
                 upstreamRelations: [
                   { source: 1, target: 2, description: '认证流量' },
@@ -1397,7 +1343,7 @@ const ApiCatalog = () => {
               };
               break;
               
-            case 2: // 第三种模式 数据
+            case 2: // 第三种模式: 数据流
               sampleLineageData = {
                 upstream: [
                   { id: 1, name: '数据收集服务', description: '收集用户行为数据' },
@@ -1411,9 +1357,9 @@ const ApiCatalog = () => {
                   { id: 4, name: 'BI工具', description: '业务智能工具' }
                 ],
                 users: [
-                  { id: 1, name: '数据分析团队', role: '分析工程师', department: '数据部门' },
-                  { id: 2, name: '业务团队', role: '业务人员', department: '业务部门' },
-                  { id: 3, name: '管理团队', role: '决策者', department: '管理部门' }
+                  { id: 1, name: '数据分析团队', role: '分析师', department: '数据部' },
+                  { id: 2, name: '业务团队', role: '业务人员', department: '业务部' },
+                  { id: 3, name: '管理层', role: '决策者', department: '管理部门' }
                 ],
                 upstreamRelations: [
                   { source: 1, target: 2, description: '存储数据' },
@@ -1427,7 +1373,7 @@ const ApiCatalog = () => {
               };
               break;
               
-            case 3: // 第四种模式 微服务架构
+            case 3: // 第四种模式: 微服务架构
               sampleLineageData = {
                 upstream: [
                   { id: 1, name: '服务注册中心', description: '服务发现与注册' },
@@ -1442,7 +1388,7 @@ const ApiCatalog = () => {
                 ],
                 users: [
                   { id: 1, name: '微服务团队', role: '架构师', department: '架构部门' },
-                  { id: 2, name: '运维团队', role: 'DevOps工程师', department: '运维部门' }
+                  { id: 2, name: '运维团队', role: 'DevOps', department: '运维部门' }
                 ],
                 upstreamRelations: [
                   { source: 1, target: 2, description: '配置发现' },
@@ -1457,7 +1403,7 @@ const ApiCatalog = () => {
               };
               break;
               
-            case 4: // 第五种模式 前端应用
+            case 4: // 第五种模式: 前端应用
               sampleLineageData = {
                 upstream: [
                   { id: 1, name: 'API网关', description: '统一接口入口' },
@@ -1470,8 +1416,8 @@ const ApiCatalog = () => {
                   { id: 4, name: 'H5页面', description: '营销活动页面' }
                 ],
                 users: [
-                  { id: 1, name: '前端团队', role: '前端开发工程师', department: '研发部' },
-                  { id: 2, name: '设计团队', role: 'UI/UX设计师', department: '设计部' },
+                  { id: 1, name: '前端团队', role: '前端开发', department: '研发部' },
+                  { id: 2, name: '设计团队', role: 'UI/UX设计', department: '设计部' },
                   { id: 3, name: '市场团队', role: '营销人员', department: '市场部' }
                 ],
                 upstreamRelations: [
@@ -1490,7 +1436,7 @@ const ApiCatalog = () => {
           try {
             localStorage.setItem(`apiLineage_${api.id}`, JSON.stringify(sampleLineageData));
           } catch (storageError) {
-            console.warn(`无法保存API ${api.id}的血缘关系数据`, storageError);
+            console.warn(`无法保存API ${api.id}的血缘关系数据:`, storageError);
           }
         }
       });
@@ -1508,6 +1454,7 @@ const ApiCatalog = () => {
   const [activeFilters, setActiveFilters] = useState([]);
 
   // 分类编辑相关状态
+  const [categories, setCategories] = useState(apiCategories);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [currentCategory, setCurrentCategory] = useState(null);
@@ -1526,7 +1473,7 @@ const ApiCatalog = () => {
   const [apiImportDialogOpen, setApiImportDialogOpen] = useState(false);
   const [apiDetailDialogOpen, setApiDetailDialogOpen] = useState(false);
 
-  // 关闭编辑对话
+  // 关闭编辑对话框
   const handleEditDialogClose = () => {
     setEditDialogOpen(false);
     setCurrentCategory(null);
@@ -1534,14 +1481,14 @@ const ApiCatalog = () => {
     setParentCategory('0');
   };
 
-  // 打开删除确认对话
+  // 打开删除确认对话框
   const handleDeleteDialogOpen = (category) => {
     setCurrentCategory(category);
     setDeleteDialogOpen(true);
     handleCategoryMenuClose();
   };
 
-  // 关闭删除确认对话
+  // 关闭删除确认对话框
   const handleDeleteDialogClose = () => {
     setDeleteDialogOpen(false);
     setCurrentCategory(null);
@@ -1663,7 +1610,7 @@ const ApiCatalog = () => {
       
       result.push({
         id: categoryId,
-        name: '　'.repeat(level) + (level > 0 ? ' ' : '') + categoryName,
+        name: '—'.repeat(level) + (level > 0 ? ' ' : '') + categoryName,
         level
       });
       
@@ -1807,7 +1754,7 @@ const ApiCatalog = () => {
             </Collapse>
           )}
           
-          {/* 递归渲染子分类*/}
+          {/* 递归渲染子分类 */}
           {hasChildren && (
             <Collapse in={isExpanded} timeout="auto" unmountOnExit>
               {renderCategories(category.classifications, level + 1)}
@@ -1825,10 +1772,10 @@ const ApiCatalog = () => {
     setSelectedApi(null);
   };
 
-  // 计算当前页应该显示的API，最0
+  // 计算当前页应该显示的API，最多10个
   const getCurrentPageApis = () => {
     const startIndex = (page - 1) * rowsPerPage;
-    const maxItemsPerPage = 10; // 每页最多显0
+    const maxItemsPerPage = 10; // 每页最多显示10个
     const endIndex = Math.min(startIndex + maxItemsPerPage, filteredApis.length);
     return filteredApis.slice(startIndex, endIndex);
   };
@@ -1847,12 +1794,12 @@ const ApiCatalog = () => {
     setLineageDialogOpen(false);
   };
 
-  // 打开API导入对话
+  // 打开API导入对话框
   const handleOpenImportDialog = () => {
     setApiImportDialogOpen(true);
   };
 
-  // 关闭API导入对话
+  // 关闭API导入对话框
   const handleCloseImportDialog = () => {
     setApiImportDialogOpen(false);
   };
@@ -1862,7 +1809,7 @@ const ApiCatalog = () => {
     // 重新获取API列表
     const updatedApis = JSON.parse(localStorage.getItem('apis') || '[]');
     if (updatedApis.length > mockApis.length) {
-      // 添加导入的API到mock列表
+      // 添加导入的API到mock列表中
       mockApis = updatedApis;
       setFilteredApis(updatedApis);
     }
@@ -1886,7 +1833,7 @@ const ApiCatalog = () => {
     }
   };
 
-  // 渲染API列表
+  // 渲染API列表项
   const renderApiListItem = (api, level = 0) => {
     const apiHasLineage = hasLineageData(api.id);
     
@@ -1929,7 +1876,7 @@ const ApiCatalog = () => {
   useEffect(() => {
     let results = [...mockApis];
     
-    // 搜索筛
+    // 搜索筛选
     if (searchQuery.trim() !== '') {
       const query = searchQuery.toLowerCase();
       results = results.filter(api => 
@@ -1941,9 +1888,9 @@ const ApiCatalog = () => {
       );
     }
     
-    // 开放等级筛
+    // 开放等级筛选
     if (accessLevelFilter) {
-      // 在实际应用中，这里应该基于API数据中的开放等级字段进行筛
+      // 在实际应用中，这里应该基于API数据中的开放等级字段进行筛选
       // 这里仅作为示例
       switch(accessLevelFilter) {
         case 'login':
@@ -1961,7 +1908,7 @@ const ApiCatalog = () => {
       }
     }
     
-    // 数据领域筛
+    // 数据领域筛选
     if (dataFieldFilters.length > 0) {
       results = results.filter(api => 
         dataFieldFilters.some(field => 
@@ -1970,7 +1917,7 @@ const ApiCatalog = () => {
       );
     }
     
-    // 主题分类筛
+    // 主题分类筛选
     if (themeFilters.length > 0) {
       results = results.filter(api => 
         themeFilters.some(theme => 
@@ -1979,7 +1926,7 @@ const ApiCatalog = () => {
       );
     }
     
-    // 服务分类筛
+    // 服务分类筛选
     if (serviceFilters.length > 0) {
       results = results.filter(api => 
         serviceFilters.some(service => 
@@ -1988,7 +1935,7 @@ const ApiCatalog = () => {
       );
     }
     
-    // 行业分类筛
+    // 行业分类筛选
     if (industryFilters.length > 0) {
       results = results.filter(api => 
         industryFilters.some(industry => 
@@ -1997,7 +1944,7 @@ const ApiCatalog = () => {
       );
     }
     
-    // 方法筛
+    // 方法筛选
     const activeMethodFilters = Object.entries(methodFilters)
       .filter(([_, isActive]) => isActive)
       .map(([method]) => method);
@@ -2008,7 +1955,7 @@ const ApiCatalog = () => {
       );
     }
     
-    // 响应时间筛
+    // 响应时间筛选
     if (responseTimeFilter !== 'all') {
       const range = responseTimeRanges.find(r => r.value === responseTimeFilter);
       if (range) {
@@ -2026,7 +1973,7 @@ const ApiCatalog = () => {
       }
     }
     
-    // 日期筛
+    // 日期筛选
     if (startDate) {
       results = results.filter(api => 
         new Date(api.lastUpdated) >= new Date(startDate)
@@ -2044,10 +1991,10 @@ const ApiCatalog = () => {
     // 当搜索或筛选条件改变时，重置到第一页
     setPage(1);
     
-    // 更新活跃筛选条
+    // 更新活跃筛选条件
     const newActiveFilters = [];
     
-    // 添加开放等级筛选条
+    // 添加开放等级筛选条件
     if (accessLevelFilter) {
       let levelLabel = '';
       switch(accessLevelFilter) {
@@ -2069,7 +2016,7 @@ const ApiCatalog = () => {
       });
     }
     
-    // 添加数据领域筛选条
+    // 添加数据领域筛选条件
     if (dataFieldFilters.length > 0) {
       newActiveFilters.push({
         type: 'dataField',
@@ -2078,7 +2025,7 @@ const ApiCatalog = () => {
       });
     }
     
-    // 添加主题分类筛选条
+    // 添加主题分类筛选条件
     if (themeFilters.length > 0) {
       newActiveFilters.push({
         type: 'theme',
@@ -2087,7 +2034,7 @@ const ApiCatalog = () => {
       });
     }
     
-    // 添加服务分类筛选条
+    // 添加服务分类筛选条件
     if (serviceFilters.length > 0) {
       newActiveFilters.push({
         type: 'service',
@@ -2096,7 +2043,7 @@ const ApiCatalog = () => {
       });
     }
     
-    // 添加行业分类筛选条
+    // 添加行业分类筛选条件
     if (industryFilters.length > 0) {
       newActiveFilters.push({
         type: 'industry',
@@ -2105,7 +2052,7 @@ const ApiCatalog = () => {
       });
     }
     
-    // 添加方法筛选条
+    // 添加方法筛选条件
     if (activeMethodFilters.length > 0) {
       newActiveFilters.push({
         type: 'method',
@@ -2120,7 +2067,7 @@ const ApiCatalog = () => {
       });
     }
     
-    // 添加响应时间筛选条
+    // 添加响应时间筛选条件
     if (responseTimeFilter !== 'all') {
       const range = responseTimeRanges.find(r => r.value === responseTimeFilter);
       newActiveFilters.push({
@@ -2130,7 +2077,7 @@ const ApiCatalog = () => {
       });
     }
     
-    // 添加日期筛选条
+    // 添加日期筛选条件
     if (startDate || endDate) {
       newActiveFilters.push({
         type: 'date',
@@ -2184,7 +2131,7 @@ const ApiCatalog = () => {
     setContextCategory(null);
   };
 
-  // 打开编辑对话
+  // 打开编辑对话框
   const handleEditDialogOpen = (category, isAdd = false) => {
     setCurrentCategory(category);
     setIsAddMode(isAdd);
@@ -2201,10 +2148,10 @@ const ApiCatalog = () => {
     handleCategoryMenuClose();
   };
 
-  // 获取API的订阅者数
+  // 获取API的订阅者数据
   const getApiSubscribers = (apiId) => {
     // 模拟从订阅关系中获取数据
-    // 实际项目中，这应该是从API或状态管理中获取的数
+    // 实际项目中，这应该是从API或状态管理中获取的数据
     const mockSubscriptions = {
       'api1': [
         { team: '数据科学团队', userId: 'user1', subscriptionDate: '2023-05-10' },
@@ -2226,7 +2173,7 @@ const ApiCatalog = () => {
     return mockSubscriptions[apiId] || [];
   };
 
-  // 获取不同的团队部门数量
+  // 获取不同的团队/部门数量
   const getUniqueTeams = (subscribers) => {
     if (!subscribers || subscribers.length === 0) return [];
     
@@ -2260,11 +2207,11 @@ const ApiCatalog = () => {
         title={
           <div>
             <Typography variant="caption" style={{ fontWeight: 'bold' }}>
-              {totalSubscribers}个订阅/ {uniqueTeams.length}个团队
+              {totalSubscribers}个订阅者 / {uniqueTeams.length}个团队
             </Typography>
             <div>
               {uniqueTeams.map((team, idx) => (
-                <div key={idx}>{team} ({subscribers.filter(s => s.team === team).length})</div>
+                <div key={idx}>• {team} ({subscribers.filter(s => s.team === team).length})</div>
               ))}
             </div>
           </div>
@@ -2418,9 +2365,9 @@ const ApiCatalog = () => {
     );
   };
 
-  // 使用ApiCategoryList渲染分类
+  // 使用ApiCategoryList渲染分类树
   const renderCategoryTree = (categories) => {
-    // 转换数据格式以适配新组
+    // 转换数据格式以适配新组件
     const transformedCategories = categories.map(category => ({
       id: category.id || category.value,
       name: category.name || category.label,
@@ -2456,7 +2403,7 @@ const ApiCatalog = () => {
 
   // 处理树节点展开/折叠
   const handleNodeToggle = (event, nodeIds) => {
-    // 将展开的节点ID转换为展开状态对
+    // 将展开的节点ID转换为展开状态对象
     const newExpandedState = {};
     nodeIds.forEach(id => {
       // 跳过API节点（以'api-'开头的ID）
@@ -2480,7 +2427,7 @@ const ApiCatalog = () => {
       [categoryId]: !prev[categoryId]
     }));
     
-    // 这里可以添加额外的分类选择逻辑，如过滤API列表
+    // 这里可以添加额外的分类选择逻辑，如过滤API列表等
   };
 
   useEffect(() => {
@@ -2508,7 +2455,6 @@ const ApiCatalog = () => {
           <Typography variant="subtitle1" className={classes.headerSubtitle}>
             探索和管理您的API集合，通过分类浏览、搜索并查看详细信息
           </Typography>
-          
           <div className={classes.searchContainer}>
             <div className={classes.searchIcon}>
               <SearchIcon />
@@ -2534,44 +2480,165 @@ const ApiCatalog = () => {
             导入API
           </Button>
         </div>
-        
-        {/* API总数统计 - 左下角 */}
-        <ApiTotalStats totalCount={filteredApis.length} />
       </Paper>
 
       <Container maxWidth="xl">
         <Grid container spacing={3}>
-          {/* 左侧面板 - 包含筛选器和分类 */}
+          {/* 筛选区 */}
+          <Grid item xs={12}>
+            <Paper className={classes.filterSection} elevation={2}>
+              {/* 筛选标题 */}
+              <div className={classes.filterTitle}>
+                <FilterListIcon className={classes.filterIcon} />
+                <Typography variant="h6">筛选选项</Typography>
+              </div>
+
+              {/* 开放等级筛选 */}
+              <div className={classes.filterCategoryRow}>
+                <Typography className={classes.filterCategoryLabel}>开放等级</Typography>
+                <div className={classes.filterCategoryOptions}>
+                  <Chip
+                    label="登录开放"
+                    className={`${classes.filterCategoryChip} ${accessLevelFilter === 'login' ? classes.filterCategoryChipSelected : ''}`}
+                    onClick={() => handleAccessLevelFilterChange('login')}
+                    clickable
+                  />
+                  <Chip
+                    label="受限开放"
+                    className={`${classes.filterCategoryChip} ${accessLevelFilter === 'restricted' ? classes.filterCategoryChipSelected : ''}`}
+                    onClick={() => handleAccessLevelFilterChange('restricted')}
+                    clickable
+                  />
+                  <Chip
+                    label="完全开放"
+                    className={`${classes.filterCategoryChip} ${accessLevelFilter === 'public' ? classes.filterCategoryChipSelected : ''}`}
+                    onClick={() => handleAccessLevelFilterChange('public')}
+                    clickable
+                  />
+                </div>
+              </div>
+
+              {/* 数据领域筛选 */}
+              <div className={classes.filterCategoryRow}>
+                <Typography className={classes.filterCategoryLabel}>数据领域</Typography>
+                <div className={classes.filterCategoryOptions}>
+                  <Chip
+                    label="用户数据 (3)"
+                    className={`${classes.filterCategoryChip} ${dataFieldFilters.includes('用户相关') ? classes.filterCategoryChipSelected : ''}`}
+                    onClick={() => handleFilterChange('用户相关', 'dataField')}
+                    clickable
+                  />
+                  <Chip
+                    label="订单数据 (2)"
+                    className={`${classes.filterCategoryChip} ${dataFieldFilters.includes('订单相关') ? classes.filterCategoryChipSelected : ''}`}
+                    onClick={() => handleFilterChange('订单相关', 'dataField')}
+                    clickable
+                  />
+                  <Chip
+                    label="产品数据 (1)"
+                    className={`${classes.filterCategoryChip} ${dataFieldFilters.includes('产品相关') ? classes.filterCategoryChipSelected : ''}`}
+                    onClick={() => handleFilterChange('产品相关', 'dataField')}
+                    clickable
+                  />
+                </div>
+              </div>
+
+              {/* 主题分类筛选 */}
+              <div className={classes.filterCategoryRow}>
+                <Typography className={classes.filterCategoryLabel}>主题分类</Typography>
+                <div className={classes.filterCategoryOptions}>
+                  <Chip
+                    label="认证服务 (1)"
+                    className={`${classes.filterCategoryChip} ${themeFilters.includes('用户认证') ? classes.filterCategoryChipSelected : ''}`}
+                    onClick={() => handleFilterChange('用户认证', 'theme')}
+                    clickable
+                  />
+                  <Chip
+                    label="用户信息 (1)"
+                    className={`${classes.filterCategoryChip} ${themeFilters.includes('用户信息') ? classes.filterCategoryChipSelected : ''}`}
+                    onClick={() => handleFilterChange('用户信息', 'theme')}
+                    clickable
+                  />
+                  <Chip
+                    label="订单管理 (1)"
+                    className={`${classes.filterCategoryChip} ${themeFilters.includes('订单管理') ? classes.filterCategoryChipSelected : ''}`}
+                    onClick={() => handleFilterChange('订单管理', 'theme')}
+                    clickable
+                  />
+                  <Chip
+                    label="支付服务 (1)"
+                    className={`${classes.filterCategoryChip} ${themeFilters.includes('支付管理') ? classes.filterCategoryChipSelected : ''}`}
+                    onClick={() => handleFilterChange('支付管理', 'theme')}
+                    clickable
+                  />
+                  <Chip
+                    label="产品目录 (1)"
+                    className={`${classes.filterCategoryChip} ${themeFilters.includes('产品列表') ? classes.filterCategoryChipSelected : ''}`}
+                    onClick={() => handleFilterChange('产品列表', 'theme')}
+                    clickable
+                  />
+                </div>
+              </div>
+
+              {/* 其他筛选选项 */}
+              <div className={classes.filterCategoryRow} style={{ borderBottom: 'none' }}>
+                <Typography className={classes.filterCategoryLabel}>API方法</Typography>
+                <div className={classes.filterCategoryOptions}>
+                  {allApiMethods.map(method => (
+                    <Chip
+                      key={method}
+                      label={method}
+                      className={`${classes.filterCategoryChip} ${methodFilters[method] ? classes.filterCategoryChipSelected : ''}`}
+                      onClick={() => setMethodFilters(prev => ({ ...prev, [method]: !prev[method] }))}
+                      clickable
+                    />
+                  ))}
+                </div>
+              </div>
+            </Paper>
+          </Grid>
+
+          {/* 活跃筛选器显示 */}
+          {activeFilters.length > 0 && (
+            <Grid item xs={12}>
+              <div className={classes.activeFiltersSection}>
+                <Typography className={classes.activeFilterLabel}>
+                  已选筛选条件:
+                </Typography>
+                {activeFilters.map((filter, index) => (
+                  <Chip
+                    key={index}
+                    label={filter.label}
+                    onDelete={filter.onClear}
+                    className={classes.filterChip}
+                    size="small"
+                  />
+                ))}
+                <Button
+                  size="small"
+                  startIcon={<ClearIcon />}
+                  onClick={() => {
+                    setAccessLevelFilter(null);
+                    setDataFieldFilters([]);
+                    setThemeFilters([]);
+                    setServiceFilters([]);
+                    setIndustryFilters([]);
+                    setMethodFilters({});
+                    setResponseTimeFilter('all');
+                    setStartDate('');
+                    setEndDate('');
+                  }}
+                  style={{ marginLeft: 'auto' }}
+                >
+                  清除所有
+                </Button>
+              </div>
+            </Grid>
+          )}
+
+          {/* 左侧分类面板 - 增加宽度 */}
           <Grid item xs={12} md={4} lg={3}>
-            {/* 筛选器 */}
-            <ApiFilter
-              // 筛选状态
-              accessLevelFilter={accessLevelFilter}
-              dataFieldFilters={dataFieldFilters}
-              themeFilters={themeFilters}
-              serviceFilters={serviceFilters}
-              industryFilters={industryFilters}
-              methodFilters={methodFilters}
-              responseTimeFilter={responseTimeFilter}
-              startDate={startDate}
-              endDate={endDate}
-              activeFilters={activeFilters}
-              allApiMethods={allApiMethods}
-              
-              // 筛选处理函数
-              onAccessLevelFilterChange={handleAccessLevelFilterChange}
-              onFilterChange={handleFilterChange}
-              onMethodFilterChange={handleMethodFilterChange}
-              onResponseTimeFilterChange={setResponseTimeFilter}
-              onDateChange={(field, value) => {
-                if (field === 'startDate') setStartDate(value);
-                if (field === 'endDate') setEndDate(value);
-              }}
-              onClearAllFilters={handleClearAllFilters}
-            />
-            
-            {/* 分类面板 */}
-            <Paper className={classes.leftPanel} style={{ marginTop: 16 }}>
+            <Paper className={classes.leftPanel}>
               <div className={classes.stickyListHeader}>
                 <Typography className={classes.headerTitleText}>
                   <CategoryIcon style={{ marginRight: 8 }} /> API分类
@@ -2592,47 +2659,14 @@ const ApiCatalog = () => {
             </Paper>
           </Grid>
 
-          {/* 右侧内容面板 - 只包含API列表 */}
+          {/* 右侧内容区 - 减少宽度 */}
           <Grid item xs={12} md={8} lg={9}>
             <Paper className={classes.rightPanel}>
-              {/* API统计信息栏 */}
-              <Box className={classes.rightPanelHeader}>
-                <Typography variant="h6" className={classes.rightPanelTitle}>
-                  API列表
-                </Typography>
-                <Box className={classes.rightPanelStats}>
-                  <Chip 
-                    icon={<CodeIcon />} 
-                    label={`共 ${filteredApis.length} 个API`}
-                    className={classes.rightPanelStatChip}
-                    color="primary"
-                    variant="outlined"
-                  />
-                  <Chip 
-                    icon={<VisibilityIcon />} 
-                    label={`${filteredApis.filter(api => api.accessLevel === 'public').length} 个公开`}
-                    className={classes.rightPanelStatChip}
-                    color="secondary"
-                    variant="outlined"
-                  />
-                  {searchQuery && (
-                    <Chip 
-                      icon={<SearchIcon />} 
-                      label={`搜索: "${searchQuery}"`}
-                      className={classes.rightPanelStatChip}
-                      onDelete={() => setSearchQuery('')}
-                      color="default"
-                      variant="outlined"
-                    />
-                  )}
-                </Box>
-              </Box>
-              
               {/* 始终显示API列表 */}
               <div>
                 <Grid container spacing={3} className={classes.apiGridContainer}>
                   {getCurrentPageApis().map((api) => (
-                    <Grid item xs={12} sm={12} md={6} lg={4} xl={3} key={api.id} className={classes.apiGridItem}>
+                    <Grid item xs={12} sm={6} md={6} lg={4} xl={3} key={api.id} className={classes.apiGridItem}>
                       {renderApiCard(api)}
                     </Grid>
                   ))}
@@ -2657,7 +2691,7 @@ const ApiCatalog = () => {
                     <FilterListIcon className={classes.emptyStateIcon} />
                     <Typography variant="h6">未找到匹配的API</Typography>
                     <Typography variant="body2" className={classes.emptyStateText}>
-                      没有找到符合当前筛选条件的API。尝试调整筛选条件或清除所有筛选器
+                      没有找到符合当前筛选条件的API。尝试调整筛选条件或清除所有筛选器。
                     </Typography>
                     <Button
                       variant="outlined"
@@ -2686,7 +2720,7 @@ const ApiCatalog = () => {
         </Grid>
       </Container>
 
-      {/* 分类编辑对话*/}
+      {/* 分类编辑对话框 */}
       <Dialog open={editDialogOpen} onClose={handleEditDialogClose}>
         <DialogTitle>{isAddMode ? '添加分类' : '编辑分类'}</DialogTitle>
         <DialogContent>
@@ -2728,14 +2762,14 @@ const ApiCatalog = () => {
         </DialogActions>
       </Dialog>
 
-      {/* 删除确认对话*/}
+      {/* 删除确认对话框 */}
       <Dialog open={deleteDialogOpen} onClose={handleDeleteDialogClose}>
         <DialogTitle>确认删除</DialogTitle>
         <DialogContent>
           <DialogContentText>
             您确定要删除分类 "{currentCategory?.name || currentCategory?.label}" 吗？
             {currentCategory?.classifications?.length > 0 && (
-              <span> 此操作也将删除所有子分类</span>
+              <span> 此操作也将删除所有子分类。</span>
             )}
           </DialogContentText>
         </DialogContent>
@@ -2759,14 +2793,14 @@ const ApiCatalog = () => {
         />
       )}
 
-      {/* API导入对话*/}
+      {/* API导入对话框 */}
       <ApiImportDialog
         open={apiImportDialogOpen}
         onClose={handleCloseImportDialog}
         onImportSuccess={handleImportSuccess}
       />
 
-      {/* API详情对话*/}
+      {/* API详情对话框 */}
       <ApiDetailDialog
         open={apiDetailDialogOpen}
         onClose={handleCloseApiDetailDialog}

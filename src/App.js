@@ -22,10 +22,8 @@ import OrderCenterPage from './pages/OrderCenterPage';
 import ReviewOrdersPage from './pages/ReviewOrdersPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 
-// 权限管理相关组件
-import UserAccountManagementPage from './pages/admin/UserAccountManagementPage';
-import ApiOwnershipManagementPage from './pages/admin/ApiOwnershipManagementPage';
-import AdminPage from './pages/admin/AdminPage';
+// 统一管理页面组件
+import UnifiedManagementPage from './pages/admin/UnifiedManagementPage';
 import UnauthorizedPage from './pages/admin/UnauthorizedPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
@@ -34,7 +32,7 @@ import LoginPage from './pages/auth/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ErrorBoundary from './components/ErrorBoundary';
 
-// 添加国际化提供者
+// 添加国际化提供
 import I18nProvider from './i18n/I18nProvider';
 
 // Redux状态和操作
@@ -44,7 +42,7 @@ import { fetchUsers, setCurrentUser } from './redux/slices/auth/userSlice';
 import { selectIsAuthenticated } from './redux/slices/authSlice';
 import { loginSuccess } from './redux/slices/authSlice';
 
-// 导入新主题
+// 导入新主
 import { lightTheme, darkTheme } from './theme';
 
 // Vite indicator component
@@ -78,7 +76,7 @@ function AppContent() {
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const { MODULES } = useFeatureFlags();
   
-  // 如果未登录且不在登录页，重定向到登录页
+  // 如果未登录且不在登录页，重定向到登录
   const PrivateRoute = ({ children, ...rest }) => {
     return (
       <Route
@@ -147,96 +145,14 @@ function AppContent() {
                 </Container>
               </Route>
               
-              {/* 权限管理路由 */}
+              {/* 统一管理控制台路由 - 替换所有原有分散的管理页面 */}
               <ProtectedRoute 
                 path="/admin"
-                exact
                 permissions="admin_view"
-                component={AdminPage}
+                component={UnifiedManagementPage}
               />
-              <ProtectedRoute 
-                path="/admin/users"
-                permissions="user_view"
-                component={UserAccountManagementPage}
-              />
-              <ProtectedRoute 
-                path="/admin/apis"
-                permissions="api_view"
-                component={ApiOwnershipManagementPage}
-              />
-              <ProtectedRoute 
-                path="/admin/settings"
-                permissions="admin_view"
-                component={() => (
-                  <Container maxWidth="lg" style={{ marginTop: '2rem', marginBottom: '2rem' }}>
-                    <Typography variant="h4" gutterBottom>系统配置</Typography>
-                    <Typography variant="body1">系统配置页面正在建设中...</Typography>
-                  </Container>
-                )}
-              />
-              <ProtectedRoute 
-                path="/admin/security"
-                permissions="admin_view"
-                component={() => (
-                  <Container maxWidth="lg" style={{ marginTop: '2rem', marginBottom: '2rem' }}>
-                    <Typography variant="h4" gutterBottom>安全与审计</Typography>
-                    <Typography variant="body1">安全与审计页面正在建设中...</Typography>
-                  </Container>
-                )}
-              />
-              <ProtectedRoute 
-                path="/admin/datasets"
-                permissions="admin_view"
-                component={() => (
-                  <Container maxWidth="lg" style={{ marginTop: '2rem', marginBottom: '2rem' }}>
-                    <Typography variant="h4" gutterBottom>数据集管理</Typography>
-                    <Typography variant="body1">数据集管理页面正在建设中...</Typography>
-                  </Container>
-                )}
-              />
-              <ProtectedRoute 
-                path="/admin/categories"
-                permissions="admin_view"
-                component={() => (
-                  <Container maxWidth="lg" style={{ marginTop: '2rem', marginBottom: '2rem' }}>
-                    <Typography variant="h4" gutterBottom>类别管理</Typography>
-                    <Typography variant="body1">类别管理页面正在建设中...</Typography>
-                  </Container>
-                )}
-              />
-              <ProtectedRoute 
-                path="/admin/system-status"
-                permissions="admin_view"
-                component={() => (
-                  <Container maxWidth="lg" style={{ marginTop: '2rem', marginBottom: '2rem' }}>
-                    <Typography variant="h4" gutterBottom>系统状态</Typography>
-                    <Typography variant="body1">系统状态页面正在建设中...</Typography>
-                  </Container>
-                )}
-              />
-              <ProtectedRoute 
-                path="/admin/usage-stats"
-                permissions="admin_view"
-                component={() => (
-                  <Container maxWidth="lg" style={{ marginTop: '2rem', marginBottom: '2rem' }}>
-                    <Typography variant="h4" gutterBottom>使用统计</Typography>
-                    <Typography variant="body1">使用统计页面正在建设中...</Typography>
-                  </Container>
-                )}
-              />
-              <ProtectedRoute 
-                path="/admin/review-reports"
-                permissions="admin_view"
-                component={() => (
-                  <Container maxWidth="lg" style={{ marginTop: '2rem', marginBottom: '2rem' }}>
-                    <Typography variant="h4" gutterBottom>审核报表</Typography>
-                    <Typography variant="body1">审核报表页面正在建设中...</Typography>
-                  </Container>
-                )}
-              />
-              <Route path="/unauthorized" component={UnauthorizedPage} />
               
-              {/* 404页面 */}
+              <Route path="/unauthorized" component={UnauthorizedPage} />
               <Route path="*" component={NotFoundPage} />
             </Switch>
             <Toast />

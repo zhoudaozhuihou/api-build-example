@@ -1,64 +1,105 @@
-// evm-extension-fix.js
-// Handles potential conflicts with cryptocurrency browser extensions
-// Specifically targets issues with evmAsk.js and similar extensions
+// evm-extension-fix.js - Enhanced version
+// Aggressively prevents ethereum property conflicts
 
 (function() {
   // Track if we've already applied this fix
   if (window._evmFixApplied) return;
   window._evmFixApplied = true;
   
-  // Store original methods we'll be patching
+  // First, attempt to define ethereum property before any extension can
+  try {
+    // Only define if it doesn't exist
+    if (!window.hasOwnProperty('ethereum')) {
+      let _ethereum = undefined;
+      
+      // Define with non-configurable descriptor to prevent redefinition
+      Object.defineProperty(window, 'ethereum', {
+        configurable: false,
+        enumerable: true,
+        get: function() {
+          return _ethereum;
+        },
+        set: function(value) {
+          if (_ethereum === undefined) {
+            _ethereum = value;
+            console.log('ethereum property set for the first time');
+          } else {
+            console.warn('Attempt to override ethereum property prevented');
+          }
+        }
+      });
+    }
+  } catch (e) {
+    console.warn('Initial ethereum property protection failed:', e);
+  }
+  
+  // Store original defineProperty method
   const originalDefineProperty = Object.defineProperty;
   
-  // Create a safe version of defineProperty that prevents conflicts
+  // Replace with our protected version
   Object.defineProperty = function(obj, prop, descriptor) {
-    // If trying to redefine ethereum and it already exists, prevent it
-    if (obj === window && prop === 'ethereum' && window.ethereum) {
-      console.warn('Prevented attempt to redefine window.ethereum property');
+    // For window.ethereum specifically
+    if (obj === window && prop === 'ethereum') {
+      console.warn('Intercepted attempt to redefine window.ethereum');
+      
+      // If ethereum is undefined, allow first definition
+      if (typeof window.ethereum === 'undefined') {
+        try {
+          return originalDefineProperty.call(this, obj, prop, descriptor);
+        } catch (e) {
+          console.warn('Error setting initial ethereum:', e);
+        }
+      }
+      
+      // If already defined, prevent redefinition
       return window.ethereum;
     }
     
-    // Otherwise proceed normally
+    // For all other properties, proceed normally
     try {
       return originalDefineProperty.call(this, obj, prop, descriptor);
     } catch (e) {
-      console.warn('Error in defineProperty:', e);
+      console.warn('Error in overridden defineProperty:', e);
       return obj[prop];
     }
   };
   
-  // Patch the inject method often used by extensions
-  if (window.ethereum) {
-    const originalEthereum = window.ethereum;
-    
-    // Monitor for external attempts to replace the provider
-    setInterval(function() {
-      if (window.ethereum !== originalEthereum && typeof window.ethereum !== 'undefined') {
-        console.log('Detected ethereum provider change, merging capabilities');
+  // Specifically target evmAsk.js inject method
+  // Create a fake inject method on window
+  window.inject = function() {
+    console.warn('Blocked attempt to call inject method');
+    return false;
+  };
+  
+  // Track and protect ethereum object if it's set later
+  let ethereumProtectionInterval = setInterval(function() {
+    if (window.ethereum && !window._ethereumProtected) {
+      window._ethereumProtected = true;
+      
+      // Make sure ethereum stays protected
+      const currentEthereum = window.ethereum;
+      
+      try {
+        // Redefine with the current value but make it non-configurable
+        Object.defineProperty(window, 'ethereum', {
+          configurable: false,
+          enumerable: true,
+          writable: false,
+          value: currentEthereum
+        });
         
-        // Merge the new provider's methods with our saved reference
-        for (const key in window.ethereum) {
-          if (typeof window.ethereum[key] === 'function' && !originalEthereum[key]) {
-            originalEthereum[key] = window.ethereum[key].bind(window.ethereum);
-          }
-        }
-        
-        // Restore our original reference
-        window.ethereum = originalEthereum;
+        console.log('Successfully locked ethereum property');
+        clearInterval(ethereumProtectionInterval);
+      } catch (e) {
+        console.warn('Failed to lock ethereum property:', e);
       }
-    }, 1000);
-  }
+    }
+  }, 50);
   
-  // Patch common injection points
-  const patchedMethods = ['inject', 'injectWeb3', 'setProvider', 'setEthereum'];
+  // Clean up interval after 5 seconds
+  setTimeout(function() {
+    clearInterval(ethereumProtectionInterval);
+  }, 5000);
   
-  patchedMethods.forEach(method => {
-    // For each potential injection method, create a safe version
-    window[method] = function() {
-      console.warn(`Blocked attempt to call ${method}`);
-      return false;
-    };
-  });
-  
-  console.log('EVM extension conflict prevention loaded');
+  console.log('Enhanced EVM extension conflict prevention loaded');
 })(); 

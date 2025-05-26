@@ -1,3 +1,6 @@
+// Import ethereum protection first
+import './utils/ethereum-protection';
+
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { BrowserRouter } from 'react-router-dom';

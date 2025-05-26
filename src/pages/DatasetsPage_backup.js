@@ -48,7 +48,6 @@ import { makeStyles } from '@material-ui/core/styles';
 import { apiCategories } from '../constants/apiCategories';
 import { useFeatureFlags } from '../contexts/FeatureFlagContext';
 import FeatureGuard from '../components/FeatureGuard';
-import DatasetUploadDialog from '../components/DatasetUploadDialog';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -152,21 +151,14 @@ const useStyles = makeStyles((theme) => ({
   },
   searchContainer: {
     position: 'relative',
-    borderRadius: '50px',
+    borderRadius: theme.shape.borderRadius,
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    width: '100%',
-    maxWidth: 650,
-    marginBottom: theme.spacing(2),
-    margin: '0 auto',
-    display: 'flex',
-    alignItems: 'center',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-    transition: 'all 0.3s ease',
     '&:hover': {
       backgroundColor: 'rgba(255, 255, 255, 0.25)',
-      boxShadow: '0 6px 25px rgba(0,0,0,0.15)',
-      transform: 'translateY(-2px)',
     },
+    width: '100%',
+    maxWidth: 600,
+    marginBottom: theme.spacing(2),
   },
   searchIcon: {
     padding: theme.spacing(0, 2),
@@ -181,17 +173,10 @@ const useStyles = makeStyles((theme) => ({
     color: 'inherit',
     width: '100%',
   },
-  headerSearchInput: {
-    padding: theme.spacing(1.8, 1, 1.8, 0),
-    paddingLeft: `calc(1em + ${theme.spacing(6)}px)`,
+  searchInput: {
+    padding: theme.spacing(1, 1, 1, 7),
     transition: theme.transitions.create('width'),
     width: '100%',
-    color: 'inherit',
-    fontSize: '1.1rem',
-    '&::placeholder': {
-      opacity: 0.7,
-      fontStyle: 'italic',
-    },
   },
   importButtonHeader: {
     marginTop: theme.spacing(1),
@@ -307,16 +292,13 @@ const DatasetsPage = () => {
   const [expandedCategories, setExpandedCategories] = useState({});
   const [selectedDataset, setSelectedDataset] = useState(null);
   
-  // 上传对话框状态
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  
   // Mock data for datasets
   const datasets = [
     {
       id: 1,
-      title: '用户行为数据集',
+      title: '用户行为数据�?,
       description: '电商平台用户行为轨迹数据，包含浏览、收藏、购物车、购买等行为数据',
-      type: '结构化数据',
+      type: '结构化数�?,
       dataSize: '1.2 GB',
       updatedAt: '2023-06-15',
       categories: ['用户行为', '电子商务'],
@@ -329,7 +311,7 @@ const DatasetsPage = () => {
     },
     {
       id: 2,
-      title: '商品评论情感分析数据集',
+      title: '商品评论情感分析数据�?,
       description: '商品评论文本及情感标签，适用于情感分析和文本分类任务',
       type: '文本数据',
       dataSize: '450 MB',
@@ -345,13 +327,13 @@ const DatasetsPage = () => {
     {
       id: 3,
       title: '销售趋势预测数据集',
-      description: '历史销售数据，可用于时间序列分析和销售预测',
+      description: '历史销售数据，可用于时间序列分析和销售预�?,
       type: '时间序列',
       dataSize: '780 MB',
       updatedAt: '2023-06-02',
       categories: ['时间序列分析', '预测建模'],
       category: '数据分析',
-      subCategory: '销售报表',
+      subCategory: '销售报�?,
       fileCount: 8,
       status: 'private',
       popularity: 65,
@@ -359,12 +341,12 @@ const DatasetsPage = () => {
     },
     {
       id: 4,
-      title: '产品图像识别数据集',
-      description: '标记好的产品图像数据集，适用于计算机视觉和图像分类任务',
+      title: '产品图像识别数据�?,
+      description: '标记好的产品图像数据集，适用于计算机视觉和图像分类任�?,
       type: '图像数据',
       dataSize: '4.5 GB',
       updatedAt: '2023-04-18',
-      categories: ['计算机视觉', '图像分类'],
+      categories: ['计算机视�?, '图像分类'],
       category: '产品相关',
       subCategory: '产品图片',
       fileCount: 12,
@@ -375,8 +357,8 @@ const DatasetsPage = () => {
     {
       id: 5,
       title: '客户信用风险评估数据',
-      description: '金融客户信用数据及风险评级，适用于风险建模',
-      type: '结构化数据',
+      description: '金融客户信用数据及风险评级，适用于风险建�?,
+      type: '结构化数�?,
       dataSize: '350 MB',
       updatedAt: '2023-05-30',
       categories: ['金融', '风险评估'],
@@ -391,7 +373,7 @@ const DatasetsPage = () => {
       id: 6,
       title: '用户推荐系统数据',
       description: '用户-物品交互数据，适用于推荐系统训练和评估',
-      type: '结构化数据',
+      type: '结构化数�?,
       dataSize: '2.3 GB',
       updatedAt: '2023-06-10',
       categories: ['推荐系统', '协同过滤'],
@@ -601,7 +583,7 @@ const DatasetsPage = () => {
             label={
               <Box display="flex" alignItems="center" style={{ color: '#1976d2' }}>
                 <AddIcon style={{ marginRight: 8 }} />
-                <span>添加根分类</span>
+                <span>添加根分�?/span>
               </Box>
             }
             className={classes.treeItem}
@@ -646,7 +628,7 @@ const DatasetsPage = () => {
                 <Box display="flex" alignItems="center" mb={1}>
                   <InfoIcon fontSize="small" style={{ marginRight: 8, color: '#757575' }} />
                   <Typography variant="caption" color="textSecondary">
-                    {dataset.dataSize} {dataset.fileCount} 个文件 更新于 {dataset.updatedAt}
+                    {dataset.dataSize} �?{dataset.fileCount} 个文�?�?更新�?{dataset.updatedAt}
                   </Typography>
                 </Box>
                 <Box mt={1}>
@@ -704,59 +686,8 @@ const DatasetsPage = () => {
     );
   };
 
-  // 处理上传对话框
-  const handleUploadDialogOpen = () => {
-    setUploadDialogOpen(true);
-  };
-
-  const handleUploadDialogClose = () => {
-    setUploadDialogOpen(false);
-  };
-
-  const handleUploadSuccess = (result) => {
-    console.log('数据集上传成功:', result);
-    // 这里可以添加刷新数据集列表的逻辑
-    // 或者显示成功提示
-  };
-
   return (
     <div className={classes.root}>
-      {/* Header Section with Search */}
-      <Paper className={classes.headerSection} elevation={0}>
-        <Container className={classes.headerContent}>
-          <Typography variant="h3" className={classes.bannerTitle}>
-            数据集管理
-          </Typography>
-          <Typography variant="subtitle1" className={classes.headerSubtitle}>
-            探索和管理数据集资源，支持多种数据格式，为API构建提供数据支撑
-          </Typography>
-          <div className={classes.searchContainer}>
-            <div className={classes.searchIcon}>
-              <SearchIcon />
-            </div>
-            <InputBase
-              placeholder="搜索数据集名称、类型或标签..."
-              classes={{
-                root: classes.inputRoot,
-                input: classes.headerSearchInput,
-              }}
-              value={searchQuery}
-              onChange={handleSearchChange}
-              inputProps={{ 'aria-label': 'search datasets' }}
-            />
-          </div>
-          <Button
-            variant="contained"
-            color="secondary"
-            startIcon={<CloudUploadIcon />}
-            className={classes.importButtonHeader}
-            onClick={handleUploadDialogOpen}
-          >
-            上传数据集
-          </Button>
-        </Container>
-      </Paper>
-
       {/* Main content area with grid layout */}
       <Container maxWidth="lg">
         <Grid container spacing={3}>
@@ -765,7 +696,7 @@ const DatasetsPage = () => {
             <Paper className={classes.leftPanel}>
               <div className={classes.stickyListHeader}>
                 <Typography className={classes.headerTitleText}>
-                  <CategoryIcon style={{ marginRight: 8 }} /> 数据集分类
+                  <CategoryIcon style={{ marginRight: 8 }} /> 数据集分�?
                 </Typography>
                 <div className={classes.editModeSwitch}>
                   <Typography className={classes.editModeLabel}>编辑</Typography>
@@ -801,7 +732,7 @@ const DatasetsPage = () => {
                     style={{ marginRight: 8 }}
                     size="small"
                   >
-                    筛选
+                    筛�?
                   </Button>
                   <Button 
                     variant="outlined" 
@@ -823,9 +754,8 @@ const DatasetsPage = () => {
                       startIcon={<CloudUploadIcon />}
                       style={{ marginLeft: 8 }}
                       size="small"
-                      onClick={handleUploadDialogOpen}
                     >
-                      上传数据集
+                      上传数据�?
                     </Button>
                   </FeatureGuard>
                   
@@ -835,10 +765,10 @@ const DatasetsPage = () => {
                     open={Boolean(sortMenuAnchorEl)}
                     onClose={handleSortMenuClose}
                   >
-                    <MenuItem onClick={handleSortMenuClose}>最新发布</MenuItem>
-                    <MenuItem onClick={handleSortMenuClose}>使用量从高到低</MenuItem>
-                    <MenuItem onClick={handleSortMenuClose}>数据量从大到小</MenuItem>
-                    <MenuItem onClick={handleSortMenuClose}>名称（A-Z）</MenuItem>
+                    <MenuItem onClick={handleSortMenuClose}>最新发�?/MenuItem>
+                    <MenuItem onClick={handleSortMenuClose}>使用量从高到�?/MenuItem>
+                    <MenuItem onClick={handleSortMenuClose}>数据量从大到�?/MenuItem>
+                    <MenuItem onClick={handleSortMenuClose}>名称（A-Z�?/MenuItem>
                   </Menu>
                   
                   <Menu
@@ -848,8 +778,8 @@ const DatasetsPage = () => {
                     onClose={handleFilterMenuClose}
                   >
                     <MenuItem onClick={handleFilterMenuClose}>所有数据集</MenuItem>
-                    <MenuItem onClick={handleFilterMenuClose}>公开数据集</MenuItem>
-                    <MenuItem onClick={handleFilterMenuClose}>私有数据集</MenuItem>
+                    <MenuItem onClick={handleFilterMenuClose}>公开数据�?/MenuItem>
+                    <MenuItem onClick={handleFilterMenuClose}>私有数据�?/MenuItem>
                     <MenuItem onClick={handleFilterMenuClose}>我创建的</MenuItem>
                     <MenuItem onClick={handleFilterMenuClose}>我收藏的</MenuItem>
                   </Menu>
@@ -869,29 +799,22 @@ const DatasetsPage = () => {
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
-        <MenuItem onClick={handleMenuClose}>编辑数据集</MenuItem>
-        <MenuItem onClick={handleMenuClose}>分享数据集</MenuItem>
+        <MenuItem onClick={handleMenuClose}>编辑数据�?/MenuItem>
+        <MenuItem onClick={handleMenuClose}>分享数据�?/MenuItem>
         
-        {/* 数据可视化功能，受功能标志保护 */}
+        {/* 数据可视化功能，受功能标志保�?*/}
         <FeatureGuard 
           moduleId={MODULES.DATASET_MANAGEMENT} 
           featureId={FEATURES[MODULES.DATASET_MANAGEMENT].DATA_VISUALIZATION}
         >
-          <MenuItem onClick={handleMenuClose}>数据可视化预览</MenuItem>
+          <MenuItem onClick={handleMenuClose}>可视化预�?/MenuItem>
         </FeatureGuard>
         
-        <MenuItem onClick={handleMenuClose}>下载数据集</MenuItem>
+        <MenuItem onClick={handleMenuClose}>下载数据�?/MenuItem>
         <MenuItem onClick={handleMenuClose}>查看使用情况</MenuItem>
         <Divider />
-        <MenuItem onClick={handleMenuClose} style={{ color: '#f44336' }}>删除数据集</MenuItem>
+        <MenuItem onClick={handleMenuClose} style={{ color: '#f44336' }}>删除数据�?/MenuItem>
       </Menu>
-
-      {/* 数据集上传对话框 */}
-      <DatasetUploadDialog
-        open={uploadDialogOpen}
-        onClose={handleUploadDialogClose}
-        onSuccess={handleUploadSuccess}
-      />
     </div>
   );
 };

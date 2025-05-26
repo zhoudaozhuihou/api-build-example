@@ -96,8 +96,11 @@ const useHomePage = (props = {}) => {
       width: '100%',
       maxWidth: 700,
       marginTop: theme.spacing(4),
+      margin: '0 auto',
       animation: '$fadeIn 0.8s ease-out 0.4s',
-      animationFillMode: 'both'
+      animationFillMode: 'both',
+      display: 'flex',
+      justifyContent: 'center'
     },
     searchField: {
       background: 'white',

@@ -384,14 +384,7 @@ function Layout({ children }) {
       icon: <AdminIcon />, 
       path: '/admin',
       permission: 'admin_view',
-      description: '平台管理与配置' 
-    },
-    { 
-      text: '用户与权限', 
-      icon: <PersonIcon />, 
-      path: '/admin/users',
-      permission: 'user_view',
-      description: '管理用户、团队和权限' 
+      description: '统一管理平台：用户、权限、API、系统设置' 
     }
   ];
 
