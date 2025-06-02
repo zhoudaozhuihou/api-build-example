@@ -350,7 +350,7 @@ function Layout({ children }) {
                 className={classes.headerIcon}
                 onClick={handleNotificationMenuOpen}
               >
-                <Badge color="secondary" badgeContent={unseenCount} invisible={unseenCount === 0}>
+                <Badge color="secondary" badgeContent={unseenCount} invisible={unseenCount === 0} overlap="rectangular">
                   <NotificationsIcon />
                 </Badge>
               </IconButton>

@@ -287,10 +287,25 @@ function ApiDetailsEditor({ onFinish, onBack, apiConfig, updateApiConfig }) {
     let responseBody = {};
     
     if (outputParams.length > 0) {
-      outputParams.forEach(paramId => {
-        const [tableId, colId] = paramId.split('_');
-        // 为了简化，这里假设所有参数都返回一个值
-        responseBody[paramId] = "示例值";
+      outputParams.forEach(param => {
+        // 检查 param 是否是对象（新结构）还是字符串（旧结构）
+        if (typeof param === 'object' && param.name) {
+          // 新的参数对象结构
+          responseBody[param.name] = param.example || getExampleValueByType(param.type);
+        } else if (typeof param === 'string' && param.includes('_')) {
+          // 旧的字符串ID结构
+          try {
+            const [tableId, colId] = param.split('_');
+            responseBody[param] = "示例值";
+          } catch (error) {
+            console.warn('无法解析参数ID:', param);
+            responseBody[param] = "示例值";
+          }
+        } else {
+          // 处理其他情况，使用安全的默认值
+          const paramName = param?.name || param?.id || param || `param_${Math.random().toString(36).substr(2, 9)}`;
+          responseBody[paramName] = "示例值";
+        }
       });
     } else {
       responseBody = { message: "操作成功" };
@@ -304,6 +319,30 @@ function ApiDetailsEditor({ onFinish, onBack, apiConfig, updateApiConfig }) {
     }
     
     return example;
+  };
+
+  // 根据参数类型生成示例值
+  const getExampleValueByType = (type) => {
+    switch (type) {
+      case 'string':
+        return '示例字符串';
+      case 'integer':
+        return 42;
+      case 'number':
+        return 3.14;
+      case 'boolean':
+        return true;
+      case 'date':
+        return '2023-05-15';
+      case 'datetime':
+        return '2023-05-15T08:30:00';
+      case 'array':
+        return [1, 2, 3];
+      case 'object':
+        return { key: 'value' };
+      default:
+        return '示例值';
+    }
   };
 
   return (

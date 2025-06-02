@@ -22,7 +22,9 @@ import {
   ListItem,
   ListItemText,
   Switch,
-  InputBase
+  InputBase,
+  Tooltip,
+  LinearProgress
 } from '@material-ui/core';
 import { TreeView, TreeItem } from '@material-ui/lab';
 import { 
@@ -34,7 +36,7 @@ import {
   Bookmark as BookmarkIcon,
   BookmarkBorder as BookmarkBorderIcon,
   MoreVert as MoreIcon,
-  Visibility as ViewIcon,
+  Visibility as VisibilityIcon,
   Description as DescriptionIcon,
   Storage as StorageIcon,
   Info as InfoIcon,
@@ -42,18 +44,30 @@ import {
   ExpandMore,
   ChevronRight as ChevronRightIcon,
   CloudUpload as CloudUploadIcon,
-  Http as HttpIcon
+  Http as HttpIcon,
+  People as PeopleIcon,
+  GetApp as GetAppIcon,
+  Share as ShareIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Favorite as FavoriteIcon,
+  FavoriteBorder as FavoriteBorderIcon,
+  Code as CodeIcon,
+  Clear as ClearIcon,
+  ChevronLeft as ChevronLeftIcon
 } from '@material-ui/icons';
 import { makeStyles } from '@material-ui/core/styles';
 import { apiCategories } from '../constants/apiCategories';
 import { useFeatureFlags } from '../contexts/FeatureFlagContext';
 import FeatureGuard from '../components/FeatureGuard';
 import DatasetUploadDialog from '../components/DatasetUploadDialog';
+import DatasetFilter from '../components/DatasetFilter';
+import DatasetDetailDialog from '../components/DatasetDetailDialog';
 
 const useStyles = makeStyles((theme) => ({
   root: {
     flexGrow: 1,
-    padding: 0,
+    minHeight: '100vh',
   },
   header: {
     marginBottom: theme.spacing(4),
@@ -108,8 +122,13 @@ const useStyles = makeStyles((theme) => ({
     fontSize: '1rem',
   },
   datasetTitle: {
-    fontWeight: 'bold',
+    fontWeight: 600,
+    fontSize: '1.1rem',
     marginBottom: theme.spacing(1),
+    display: '-webkit-box',
+    '-webkit-line-clamp': 2,
+    '-webkit-box-orient': 'vertical',
+    overflow: 'hidden',
   },
   cardActions: {
     justifyContent: 'space-between',
@@ -122,51 +141,37 @@ const useStyles = makeStyles((theme) => ({
     margin: theme.spacing(0.5),
     backgroundColor: theme.palette.grey[200],
   },
-  // Added styles for left panel and category navigation
   headerSection: {
-    background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
-    color: theme.palette.primary.contrastText,
-    padding: theme.spacing(4, 0),
+    height: 300,
+    backgroundImage: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+    display: 'flex',
+    alignItems: 'center',
+    color: theme.palette.common.white,
     marginBottom: theme.spacing(3),
-    borderRadius: theme.spacing(1),
-    position: 'relative',
-    overflow: 'hidden',
   },
   headerContent: {
-    padding: theme.spacing(0, 3),
-    position: 'relative',
-    zIndex: 2,
+    width: '100%',
+    textAlign: 'center',
   },
   bannerTitle: {
+    marginBottom: theme.spacing(2),
     fontWeight: 700,
-    marginBottom: theme.spacing(1),
-    [theme.breakpoints.down('sm')]: {
-      fontSize: '2rem',
-    },
+    textShadow: '0 2px 4px rgba(0,0,0,0.3)',
   },
   headerSubtitle: {
-    fontSize: '1.1rem',
-    maxWidth: 600,
-    marginBottom: theme.spacing(3),
     opacity: 0.9,
+    maxWidth: 600,
+    margin: '0 auto',
+    marginBottom: theme.spacing(3),
   },
   searchContainer: {
     position: 'relative',
-    borderRadius: '50px',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    width: '100%',
-    maxWidth: 650,
-    marginBottom: theme.spacing(2),
+    borderRadius: theme.shape.borderRadius * 3,
+    backgroundColor: theme.palette.common.white,
+    maxWidth: 500,
     margin: '0 auto',
-    display: 'flex',
-    alignItems: 'center',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-    transition: 'all 0.3s ease',
-    '&:hover': {
-      backgroundColor: 'rgba(255, 255, 255, 0.25)',
-      boxShadow: '0 6px 25px rgba(0,0,0,0.15)',
-      transform: 'translateY(-2px)',
-    },
+    marginBottom: theme.spacing(3),
+    boxShadow: theme.shadows[3],
   },
   searchIcon: {
     padding: theme.spacing(0, 2),
@@ -176,54 +181,49 @@ const useStyles = makeStyles((theme) => ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    color: theme.palette.primary.main,
   },
   inputRoot: {
-    color: 'inherit',
+    color: theme.palette.text.primary,
     width: '100%',
   },
   headerSearchInput: {
-    padding: theme.spacing(1.8, 1, 1.8, 0),
-    paddingLeft: `calc(1em + ${theme.spacing(6)}px)`,
+    padding: theme.spacing(1.5, 1, 1.5, 0),
+    paddingLeft: `calc(1em + ${theme.spacing(4)}px)`,
     transition: theme.transitions.create('width'),
     width: '100%',
-    color: 'inherit',
-    fontSize: '1.1rem',
-    '&::placeholder': {
-      opacity: 0.7,
-      fontStyle: 'italic',
-    },
+    fontSize: '1rem',
   },
   importButtonHeader: {
-    marginTop: theme.spacing(1),
+    borderRadius: theme.shape.borderRadius * 2,
+    padding: theme.spacing(1, 3),
+    textTransform: 'none',
+    fontWeight: 600,
+    boxShadow: theme.shadows[3],
   },
   leftPanel: {
-    height: '100%',
-    overflow: 'hidden',
+    backgroundColor: theme.palette.background.paper,
+    borderRadius: theme.shape.borderRadius,
+    boxShadow: theme.shadows[2],
     display: 'flex',
     flexDirection: 'column',
-    borderRadius: theme.spacing(1),
-    [theme.breakpoints.down('sm')]: {
-      marginBottom: theme.spacing(3),
-    },
-  },
-  categoryListContainer: {
-    flexGrow: 1,
-    overflow: 'auto',
-    padding: theme.spacing(1, 0),
-    height: 'calc(100vh - 200px)',
+    height: 'fit-content',
+    position: 'sticky',
+    top: theme.spacing(2),
+    maxHeight: 'calc(100vh - 100px)',
   },
   stickyListHeader: {
     position: 'sticky',
     top: 0,
     zIndex: 10,
-    background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+    background: theme.palette.primary.main,
     color: theme.palette.primary.contrastText,
-    padding: theme.spacing(2, 2.5),
+    padding: theme.spacing(2),
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    width: '100%',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    borderTopLeftRadius: theme.shape.borderRadius,
+    borderTopRightRadius: theme.shape.borderRadius,
   },
   headerTitleText: {
     fontWeight: 600,
@@ -233,64 +233,94 @@ const useStyles = makeStyles((theme) => ({
   editModeSwitch: {
     display: 'flex',
     alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 20,
+    padding: theme.spacing(0.5, 1),
   },
   editModeLabel: {
-    fontSize: '0.75rem',
-    marginRight: theme.spacing(0.5),
+    fontSize: '0.8rem',
+    marginRight: theme.spacing(1),
+    fontWeight: 500,
   },
-  categoryTreeView: {
+  categoryListContainer: {
+    flex: 1,
+    overflowY: 'auto',
     padding: theme.spacing(1),
-    '& .MuiTreeItem-root': {
-      marginBottom: theme.spacing(0.5),
-    },
-  },
-  treeItem: {
-    borderRadius: 4,
-    '&:hover': {
-      backgroundColor: 'rgba(25, 118, 210, 0.04)',
-    },
-    '& .MuiTreeItem-content': {
-      padding: theme.spacing(0.5, 1),
-    },
-  },
-  apiTreeItem: {
-    paddingLeft: theme.spacing(2),
-  },
-  treeItemSelected: {
-    backgroundColor: 'rgba(25, 118, 210, 0.08) !important',
-  },
-  categoryCountBadge: {
-    fontSize: '0.7rem',
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-    color: 'inherit',
-    borderRadius: 10,
-    padding: theme.spacing(0, 0.5),
-    marginLeft: theme.spacing(1),
-    minWidth: 20,
-    height: 16,
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   contentPanel: {
-    borderRadius: theme.spacing(1),
+    backgroundColor: theme.palette.background.paper,
+    borderRadius: theme.shape.borderRadius,
+    boxShadow: theme.shadows[2],
+    minHeight: 600,
+  },
+  rightPanelHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: theme.spacing(2),
+    backgroundColor: theme.palette.background.default,
+    borderTopLeftRadius: theme.shape.borderRadius,
+    borderTopRightRadius: theme.shape.borderRadius,
+  },
+  rightPanelTitle: {
+    fontWeight: 600,
+    fontSize: '1.2rem',
+  },
+  rightPanelStats: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: theme.spacing(1),
+  },
+  rightPanelStatChip: {
+    fontSize: '0.8rem',
+    fontWeight: 500,
+  },
+  emptyState: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: theme.spacing(8),
+    textAlign: 'center',
+    color: theme.palette.text.secondary,
+  },
+  emptyStateIcon: {
+    fontSize: 80,
+    marginBottom: theme.spacing(2),
+    color: theme.palette.text.disabled,
+    opacity: 0.5,
+  },
+  emptyStateText: {
+    maxWidth: 400,
+    margin: '0 auto',
+    marginBottom: theme.spacing(2),
+  },
+  datasetCard: {
     height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+    borderRadius: theme.shape.borderRadius * 1.5,
+    '&:hover': {
+      transform: 'translateY(-4px)',
+      boxShadow: theme.shadows[6],
+    },
+  },
+  datasetDescription: {
+    color: theme.palette.text.secondary,
+    display: '-webkit-box',
+    '-webkit-line-clamp': 3,
+    '-webkit-box-orient': 'vertical',
+    overflow: 'hidden',
+    minHeight: '3.6em',
+    lineHeight: 1.2,
   },
   datasetGridContainer: {
     padding: theme.spacing(2),
-    display: 'flex',
-    flexWrap: 'wrap',
-    [theme.breakpoints.down('sm')]: {
-      padding: theme.spacing(1),
-    },
   },
   datasetGridItem: {
     display: 'flex',
     height: '100%',
-    marginBottom: theme.spacing(3),
-    [theme.breakpoints.down('xs')]: {
-      marginBottom: theme.spacing(2),
-    },
   },
 }));
 
@@ -310,6 +340,20 @@ const DatasetsPage = () => {
   // 上传对话框状态
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   
+  // 数据集详情对话框状态
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [selectedDatasetForDetail, setSelectedDatasetForDetail] = useState(null);
+  
+  // 筛选器状态
+  const [statusFilter, setStatusFilter] = useState(null);
+  const [typeFilters, setTypeFilters] = useState([]);
+  const [themeFilters, setThemeFilters] = useState([]);
+  const [dataSizeFilter, setDataSizeFilter] = useState('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [activeFilters, setActiveFilters] = useState([]);
+  const [page, setPage] = useState(1);
+
   // Mock data for datasets
   const datasets = [
     {
@@ -404,21 +448,210 @@ const DatasetsPage = () => {
     }
   ];
 
-  const filteredDatasets = datasets.filter(dataset => {
-    // Filter by search query
-    const matchesSearch = searchQuery === '' || 
-      dataset.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      dataset.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      dataset.categories.some(cat => cat.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    // Filter by selected category
-    const matchesCategory = !selectedCategory || 
-      dataset.category === selectedCategory.name || 
-      dataset.subCategory === selectedCategory.name;
-    
-    return matchesSearch && matchesCategory;
-  });
+  // 筛选后的数据集
+  const [filteredDatasets, setFilteredDatasets] = useState(datasets);
 
+  // 筛选处理函数
+  const handleStatusFilterChange = (status) => {
+    setStatusFilter(statusFilter === status ? null : status);
+  };
+
+  const handleFilterChange = (filter, filterType) => {
+    let currentFilters;
+    let setFilters;
+    
+    switch(filterType) {
+      case 'type':
+        currentFilters = typeFilters;
+        setFilters = setTypeFilters;
+        break;
+      case 'theme':
+        currentFilters = themeFilters;
+        setFilters = setThemeFilters;
+        break;
+      default:
+        return;
+    }
+    
+    if (currentFilters.includes(filter)) {
+      setFilters(currentFilters.filter(f => f !== filter));
+    } else {
+      setFilters([...currentFilters, filter]);
+    }
+  };
+
+  const handleDataSizeFilterChange = (size) => {
+    setDataSizeFilter(size);
+  };
+
+  const handleDateChange = (field, value) => {
+    if (field === 'startDate') setStartDate(value);
+    if (field === 'endDate') setEndDate(value);
+  };
+
+  const handleClearAllFilters = () => {
+    setStatusFilter(null);
+    setTypeFilters([]);
+    setThemeFilters([]);
+    setDataSizeFilter('all');
+    setStartDate('');
+    setEndDate('');
+  };
+
+  // 数据转换辅助函数
+  const parseSizeToMB = (sizeStr) => {
+    const match = sizeStr.match(/^([\d.]+)\s*(MB|GB)$/);
+    if (!match) return 0;
+    const value = parseFloat(match[1]);
+    const unit = match[2];
+    return unit === 'GB' ? value * 1024 : value;
+  };
+
+  // 应用筛选逻辑
+  useEffect(() => {
+    let results = [...datasets];
+    
+    // 搜索筛选
+    if (searchQuery.trim() !== '') {
+      const query = searchQuery.toLowerCase();
+      results = results.filter(dataset => 
+        dataset.title.toLowerCase().includes(query) || 
+        dataset.description.toLowerCase().includes(query) ||
+        dataset.type.toLowerCase().includes(query) ||
+        dataset.categories.some(cat => cat.toLowerCase().includes(query))
+      );
+    }
+    
+    // 状态筛选
+    if (statusFilter) {
+      results = results.filter(dataset => dataset.status === statusFilter);
+    }
+    
+    // 类型筛选
+    if (typeFilters.length > 0) {
+      results = results.filter(dataset => 
+        typeFilters.includes(dataset.type)
+      );
+    }
+    
+    // 主题筛选 
+    if (themeFilters.length > 0) {
+      results = results.filter(dataset =>
+        dataset.categories.some(cat => themeFilters.includes(cat))
+      );
+    }
+    
+    // 数据大小筛选
+    if (dataSizeFilter !== 'all') {
+      const sizeRanges = {
+        'small': { max: 100 },
+        'medium': { min: 100, max: 1024 },
+        'large': { min: 1024, max: 10240 },
+        'xlarge': { min: 10240 }
+      };
+      
+      const range = sizeRanges[dataSizeFilter];
+      if (range) {
+        results = results.filter(dataset => {
+          const sizeMB = parseSizeToMB(dataset.dataSize);
+          if (range.min && range.max) {
+            return sizeMB >= range.min && sizeMB <= range.max;
+          } else if (range.min) {
+            return sizeMB >= range.min;
+          } else if (range.max) {
+            return sizeMB <= range.max;
+          }
+          return true;
+        });
+      }
+    }
+    
+    // 日期筛选
+    if (startDate) {
+      results = results.filter(dataset => 
+        new Date(dataset.updatedAt) >= new Date(startDate)
+      );
+    }
+    
+    if (endDate) {
+      results = results.filter(dataset => 
+        new Date(dataset.updatedAt) <= new Date(endDate)
+      );
+    }
+    
+    setFilteredDatasets(results);
+    setPage(1); // 重置到第一页
+    
+    // 更新活跃筛选条件
+    const newActiveFilters = [];
+    
+    if (statusFilter) {
+      const statusLabels = {
+        'public': '公开数据集',
+        'private': '私有数据集',
+        'restricted': '受限访问'
+      };
+      newActiveFilters.push({
+        type: 'status',
+        label: `状态: ${statusLabels[statusFilter]}`,
+        onClear: () => setStatusFilter(null)
+      });
+    }
+    
+    if (typeFilters.length > 0) {
+      newActiveFilters.push({
+        type: 'type',
+        label: `类型: ${typeFilters.join(', ')}`,
+        onClear: () => setTypeFilters([])
+      });
+    }
+    
+    if (themeFilters.length > 0) {
+      newActiveFilters.push({
+        type: 'theme',
+        label: `主题: ${themeFilters.join(', ')}`,
+        onClear: () => setThemeFilters([])
+      });
+    }
+    
+    if (dataSizeFilter !== 'all') {
+      const sizeLabels = {
+        'small': '小型 (< 100MB)',
+        'medium': '中型 (100MB - 1GB)',
+        'large': '大型 (1GB - 10GB)',
+        'xlarge': '超大型 (> 10GB)'
+      };
+      newActiveFilters.push({
+        type: 'size',
+        label: `大小: ${sizeLabels[dataSizeFilter]}`,
+        onClear: () => setDataSizeFilter('all')
+      });
+    }
+    
+    if (startDate || endDate) {
+      newActiveFilters.push({
+        type: 'date',
+        label: `更新日期: ${startDate || '开始'} - ${endDate || '结束'}`,
+        onClear: () => {
+          setStartDate('');
+          setEndDate('');
+        }
+      });
+    }
+    
+    setActiveFilters(newActiveFilters);
+    
+  }, [
+    searchQuery, 
+    statusFilter, 
+    typeFilters, 
+    themeFilters, 
+    dataSizeFilter, 
+    startDate, 
+    endDate
+  ]);
+
+  // 处理搜索输入变化
   const handleMenuOpen = (event, cardId) => {
     setAnchorEl(event.currentTarget);
     setSelectedCard(cardId);
@@ -465,9 +698,8 @@ const DatasetsPage = () => {
 
   // Handle category selection
   const handleCategorySelect = (category) => {
-    const categoryId = category.id || category.value;
-    
     setSelectedCategory(category);
+    const categoryId = category.id || category.value;
     
     // Toggle expansion state
     setExpandedCategories(prev => ({
@@ -478,32 +710,25 @@ const DatasetsPage = () => {
 
   // Handle node toggle in tree view
   const handleNodeToggle = (event, nodeIds) => {
-    // Convert toggled node IDs to expanded state object
     const newExpandedState = {};
     nodeIds.forEach(id => {
-      // Skip dataset nodes
       if (!id.startsWith('dataset-') && id !== 'add-root-category') {
         newExpandedState[id] = true;
       }
     });
-    
-    // Update expanded state
     setExpandedCategories(newExpandedState);
   };
 
   // Function to render the category tree
   const renderCategoryTree = (categories) => {
-    // Recursive function to build tree items
     const renderTreeItems = (items, level = 0) => {
-      if (!items) return null;
-
       return items.map((category) => {
         const categoryId = category.id || category.value;
         const categoryName = category.name || category.label;
         const hasChildren = category.classifications && category.classifications.length > 0;
         
         // Get datasets related to this category
-        const categoryDatasets = datasets.filter(dataset => 
+        const categoryDatasets = filteredDatasets.filter(dataset => 
           dataset.category === categoryName || dataset.subCategory === categoryName
         );
         
@@ -514,12 +739,10 @@ const DatasetsPage = () => {
           
           catList.forEach(cat => {
             const catName = cat.name || cat.label;
-            // Add current category's dataset count
-            count += datasets.filter(dataset => 
+            count += filteredDatasets.filter(dataset => 
               dataset.category === catName || dataset.subCategory === catName
             ).length;
             
-            // Recursively add child categories' dataset counts
             if (cat.classifications && cat.classifications.length > 0) {
               count += getNestedDatasetCount(cat.classifications);
             }
@@ -532,81 +755,41 @@ const DatasetsPage = () => {
           ? categoryDatasets.length + getNestedDatasetCount(category.classifications)
           : categoryDatasets.length;
         
-        // Skip categories with no datasets
-        if (totalDatasetCount === 0 && !hasChildren) return null;
-        
-        // Create label content with count badge
-        const labelContent = (
-          <Box display="flex" alignItems="center" justifyContent="space-between" width="100%">
-            <Box display="flex" alignItems="center">
-              {categoryName}
-            </Box>
-            <span className={classes.categoryCountBadge}>{totalDatasetCount}</span>
-          </Box>
-        );
-        
         return (
-          <TreeItem 
-            key={categoryId} 
-            nodeId={categoryId.toString()} 
-            label={labelContent}
-            className={classes.treeItem}
-            classes={{
-              selected: classes.treeItemSelected
-            }}
+          <TreeItem
+            key={categoryId}
+            nodeId={categoryId}
+            label={
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0' }}>
+                <Typography variant="body2" style={{ fontWeight: level === 0 ? 600 : 400 }}>
+                  {categoryName}
+                </Typography>
+                <Chip 
+                  size="small" 
+                  label={totalDatasetCount} 
+                  style={{ 
+                    fontSize: '0.7rem', 
+                    height: '20px',
+                    backgroundColor: level === 0 ? '#e3f2fd' : '#f5f5f5'
+                  }} 
+                />
+              </div>
+            }
             onClick={() => handleCategorySelect(category)}
           >
-            {/* Show datasets in this category */}
-            {categoryDatasets.length > 0 && categoryDatasets.map(dataset => (
-              <TreeItem
-                key={`dataset-${dataset.id}`}
-                nodeId={`dataset-${dataset.id}`}
-                label={
-                  <Box display="flex" alignItems="center">
-                    <StorageIcon fontSize="small" style={{ marginRight: 8 }} />
-                    <span>{dataset.title}</span>
-                  </Box>
-                }
-                className={`${classes.treeItem} ${classes.apiTreeItem}`}
-                classes={{
-                  selected: classes.treeItemSelected
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedDataset(dataset);
-                }}
-              />
-            ))}
-            
-            {/* Recursively render child categories */}
             {hasChildren && renderTreeItems(category.classifications, level + 1)}
           </TreeItem>
         );
-      }).filter(Boolean); // Filter out null items
+      });
     };
 
     return (
       <TreeView
-        className={classes.categoryTreeView}
-        defaultCollapseIcon={<ExpandMore />}
-        defaultExpandIcon={<ChevronRightIcon />}
         expanded={Object.keys(expandedCategories).filter(key => expandedCategories[key])}
-        selected={selectedDataset ? `dataset-${selectedDataset.id}` : ''}
         onNodeToggle={handleNodeToggle}
+        style={{ padding: '8px' }}
       >
         {renderTreeItems(categories)}
-        {editMode && (
-          <TreeItem 
-            nodeId="add-root-category" 
-            label={
-              <Box display="flex" alignItems="center" style={{ color: '#1976d2' }}>
-                <AddIcon style={{ marginRight: 8 }} />
-                <span>添加根分类</span>
-              </Box>
-            }
-            className={classes.treeItem}
-          />
-        )}
       </TreeView>
     );
   };
@@ -665,13 +848,14 @@ const DatasetsPage = () => {
                 <Button 
                   size="small" 
                   color="primary" 
-                  startIcon={<ViewIcon />}
+                  startIcon={<VisibilityIcon />}
+                  onClick={() => handleDatasetDetailOpen(dataset)}
                 >
                   查看
                 </Button>
                 <Box>
                   <IconButton size="small">
-                    <Badge badgeContent={dataset.popularity} color="primary" max={99}>
+                    <Badge badgeContent={dataset.popularity} color="primary" max={99} overlap="rectangular">
                       <DownloadIcon fontSize="small" />
                     </Badge>
                   </IconButton>
@@ -715,8 +899,40 @@ const DatasetsPage = () => {
 
   const handleUploadSuccess = (result) => {
     console.log('数据集上传成功:', result);
-    // 这里可以添加刷新数据集列表的逻辑
-    // 或者显示成功提示
+    
+    // 创建新的数据集对象
+    const newDataset = {
+      id: result.id || Date.now(),
+      title: result.name || '新数据集',
+      description: result.description || '数据集描述',
+      type: result.format || '结构化数据',
+      dataSize: result.files ? `${Math.round(result.files.reduce((total, f) => total + f.size, 0) / (1024 * 1024))} MB` : '未知',
+      updatedAt: new Date().toLocaleDateString('zh-CN'),
+      categories: result.tags || ['未分类'],
+      category: result.category || '其他',
+      subCategory: '',
+      fileCount: result.files ? result.files.length : 1,
+      status: result.isPublic ? 'public' : 'private',
+      popularity: 0,
+      image: 'new_dataset.jpg'
+    };
+    
+    // 将新数据集添加到列表开头
+    setFilteredDatasets(prevDatasets => [newDataset, ...prevDatasets]);
+    
+    // 显示成功提示（这里可以用snackbar或notification）
+    console.log('新数据集已添加到列表');
+  };
+
+  // 处理数据集详情对话框
+  const handleDatasetDetailOpen = (dataset) => {
+    setSelectedDatasetForDetail(dataset);
+    setDetailDialogOpen(true);
+  };
+
+  const handleDatasetDetailClose = () => {
+    setDetailDialogOpen(false);
+    setSelectedDatasetForDetail(null);
   };
 
   return (
@@ -757,11 +973,31 @@ const DatasetsPage = () => {
         </Container>
       </Paper>
 
-      {/* Main content area with grid layout */}
-      <Container maxWidth="lg">
+      <Container maxWidth="xl">
+        {/* 顶部筛选器区域 */}
+        <Paper style={{ marginBottom: 24, padding: 0 }} elevation={2}>
+          <DatasetFilter
+            // 筛选状态
+            statusFilter={statusFilter}
+            typeFilters={typeFilters}
+            themeFilters={themeFilters}
+            dataSizeFilter={dataSizeFilter}
+            startDate={startDate}
+            endDate={endDate}
+            activeFilters={activeFilters}
+            
+            // 筛选处理函数
+            onStatusFilterChange={handleStatusFilterChange}
+            onFilterChange={handleFilterChange}
+            onDataSizeFilterChange={handleDataSizeFilterChange}
+            onDateChange={handleDateChange}
+            onClearAllFilters={handleClearAllFilters}
+          />
+        </Paper>
+
         <Grid container spacing={3}>
-          {/* Left panel - Category navigation */}
-          <Grid item xs={12} md={4} lg={3}>
+          {/* 左侧 - 数据集分类面板 */}
+          <Grid item xs={12} md={3} lg={3}>
             <Paper className={classes.leftPanel}>
               <div className={classes.stickyListHeader}>
                 <Typography className={classes.headerTitleText}>
@@ -783,34 +1019,38 @@ const DatasetsPage = () => {
             </Paper>
           </Grid>
 
-          {/* Right panel - Content area */}
-          <Grid item xs={12} md={8} lg={9}>
+          {/* 右侧 - 数据集列表面板 */}
+          <Grid item xs={12} md={9} lg={9}>
             <Paper className={classes.contentPanel}>
-              <Box p={2} display="flex" justifyContent="space-between" alignItems="center">
-                <Typography variant="h6">
-                  {selectedCategory ? selectedCategory.name : '所有数据集'}
-                  <Typography variant="caption" color="textSecondary" style={{ marginLeft: 8 }}>
-                    ({filteredDatasets.length} 个数据集)
-                  </Typography>
+              <Box className={classes.rightPanelHeader}>
+                <Typography variant="h6" className={classes.rightPanelTitle}>
+                  数据集列表
                 </Typography>
-                <Box>
-                  <Button
+                <Box className={classes.rightPanelStats}>
+                  <Chip 
+                    icon={<StorageIcon />} 
+                    label={`共 ${filteredDatasets.length} 个数据集`}
+                    className={classes.rightPanelStatChip}
+                    color="primary"
                     variant="outlined"
-                    startIcon={<FilterIcon />}
-                    onClick={handleFilterMenuOpen}
-                    style={{ marginRight: 8 }}
-                    size="small"
-                  >
-                    筛选
-                  </Button>
-                  <Button 
-                    variant="outlined" 
-                    startIcon={<SortIcon />}
-                    onClick={handleSortMenuOpen}
-                    size="small"
-                  >
-                    排序
-                  </Button>
+                  />
+                  <Chip 
+                    icon={<VisibilityIcon />} 
+                    label={`${filteredDatasets.filter(dataset => dataset.status === 'public').length} 个公开`}
+                    className={classes.rightPanelStatChip}
+                    color="secondary"
+                    variant="outlined"
+                  />
+                  {searchQuery && (
+                    <Chip 
+                      icon={<SearchIcon />} 
+                      label={`搜索: "${searchQuery}"`}
+                      className={classes.rightPanelStatChip}
+                      onDelete={() => setSearchQuery('')}
+                      color="default"
+                      variant="outlined"
+                    />
+                  )}
                   
                   {/* 受功能标志保护的上传按钮 */}
                   <FeatureGuard 
@@ -828,35 +1068,32 @@ const DatasetsPage = () => {
                       上传数据集
                     </Button>
                   </FeatureGuard>
-                  
-                  <Menu
-                    anchorEl={sortMenuAnchorEl}
-                    keepMounted
-                    open={Boolean(sortMenuAnchorEl)}
-                    onClose={handleSortMenuClose}
-                  >
-                    <MenuItem onClick={handleSortMenuClose}>最新发布</MenuItem>
-                    <MenuItem onClick={handleSortMenuClose}>使用量从高到低</MenuItem>
-                    <MenuItem onClick={handleSortMenuClose}>数据量从大到小</MenuItem>
-                    <MenuItem onClick={handleSortMenuClose}>名称（A-Z）</MenuItem>
-                  </Menu>
-                  
-                  <Menu
-                    anchorEl={filterMenuAnchorEl}
-                    keepMounted
-                    open={Boolean(filterMenuAnchorEl)}
-                    onClose={handleFilterMenuClose}
-                  >
-                    <MenuItem onClick={handleFilterMenuClose}>所有数据集</MenuItem>
-                    <MenuItem onClick={handleFilterMenuClose}>公开数据集</MenuItem>
-                    <MenuItem onClick={handleFilterMenuClose}>私有数据集</MenuItem>
-                    <MenuItem onClick={handleFilterMenuClose}>我创建的</MenuItem>
-                    <MenuItem onClick={handleFilterMenuClose}>我收藏的</MenuItem>
-                  </Menu>
                 </Box>
               </Box>
+              
               <Divider />
-              {renderDatasetCards()}
+              
+              {/* 数据集卡片列表 */}
+              {filteredDatasets.length > 0 ? (
+                renderDatasetCards()
+              ) : (
+                <div className={classes.emptyState}>
+                  <StorageIcon className={classes.emptyStateIcon} />
+                  <Typography variant="h6">未找到匹配的数据集</Typography>
+                  <Typography variant="body2" className={classes.emptyStateText}>
+                    没有找到符合当前筛选条件的数据集。尝试调整筛选条件或清除所有筛选器
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    startIcon={<ClearIcon />}
+                    style={{ marginTop: 16 }}
+                    onClick={handleClearAllFilters}
+                  >
+                    清除所有筛选器
+                  </Button>
+                </div>
+              )}
             </Paper>
           </Grid>
         </Grid>
@@ -891,6 +1128,13 @@ const DatasetsPage = () => {
         open={uploadDialogOpen}
         onClose={handleUploadDialogClose}
         onSuccess={handleUploadSuccess}
+      />
+
+      {/* 数据集详情对话框 */}
+      <DatasetDetailDialog
+        open={detailDialogOpen}
+        onClose={handleDatasetDetailClose}
+        dataset={selectedDatasetForDetail}
       />
     </div>
   );

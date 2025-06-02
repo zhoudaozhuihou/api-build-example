@@ -151,21 +151,45 @@ function SqlEditor({ onNext, onBack, apiConfig, updateApiConfig }) {
       const outputParameters = apiConfig.outputParameters || [];
       
       // 获取参数详细信息
-      const getColumnDetails = (columnId) => {
-        const [tableId, colId] = columnId.split('_');
-        const table = mockTables.find(t => t.id.toString() === tableId);
-        if (table) {
-          const column = table.columns.find(c => c.id.toString() === colId);
-          if (column) {
-            return {
-              id: columnId,
-              name: `${table.name}.${column.name}`,
-              type: column.type,
-              description: column.description,
-            };
+      const getColumnDetails = (param) => {
+        // 检查 param 是否已经是对象格式
+        if (typeof param === 'object' && param.name) {
+          // 新的参数对象结构，直接返回
+          return {
+            id: param.id,
+            name: param.name,
+            type: param.type,
+            description: param.description || '',
+          };
+        } else if (typeof param === 'string' && param.includes('_')) {
+          // 旧的字符串ID结构
+          try {
+            const [tableId, colId] = param.split('_');
+            const table = mockTables.find(t => t.id.toString() === tableId);
+            if (table) {
+              const column = table.columns.find(c => c.id.toString() === colId);
+              if (column) {
+                return {
+                  id: param,
+                  name: `${table.name}.${column.name}`,
+                  type: column.type,
+                  description: column.description,
+                };
+              }
+            }
+          } catch (error) {
+            console.warn('无法解析参数ID:', param);
           }
         }
-        return { id: columnId, name: columnId, type: 'UNKNOWN', description: '未知字段' };
+        
+        // 后备处理：无法解析的情况
+        const paramName = param?.name || param?.id || param || `unknown_param_${Math.random().toString(36).substr(2, 9)}`;
+        return { 
+          id: param?.id || paramName, 
+          name: paramName, 
+          type: param?.type || 'UNKNOWN', 
+          description: param?.description || '未知字段' 
+        };
       };
       
       setInputParams(inputParameters.map(getColumnDetails));

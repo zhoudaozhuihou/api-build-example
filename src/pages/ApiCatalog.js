@@ -95,6 +95,7 @@ import ApiLineage from '../components/ApiLineage';
 import ApiImportDialog from '../components/ApiImportDialog';
 import ApiDetailDialog from '../components/ApiDetailDialog';
 import ApiCategoryList from '../components/ApiCategoryList';
+import ApiSubscriptionDialog from '../components/ApiSubscriptionDialog';
 
 // 背景图URL，您可以替换为自己的图片
 const headerBgImage = 'https://source.unsplash.com/random/1600x400/?api,technology,digital';
@@ -304,7 +305,6 @@ const useStyles = makeStyles((theme) => ({
     transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
     borderRadius: theme.shape.borderRadius * 1.5,
     overflow: 'hidden',
-    margin: '0 auto',
     border: '1px solid rgba(0,0,0,0.08)',
     backgroundColor: theme.palette.background.paper,
     position: 'relative',
@@ -353,7 +353,6 @@ const useStyles = makeStyles((theme) => ({
     '-webkit-line-clamp': 1,
     '-webkit-box-orient': 'vertical',
     overflow: 'hidden',
-    margin: '0 auto',
     textOverflow: 'ellipsis',
   },
   apiDescription: {
@@ -362,9 +361,8 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(2),
     padding: theme.spacing(0, 0),
     lineHeight: 1.6,
-    height: '3.2em', // 固定高度，相当于2行文
+    height: '3.2em', // 固定高度，相当于2行文本
     overflow: 'hidden',
-    margin: '0 auto',
     textOverflow: 'ellipsis',
     display: '-webkit-box',
     '-webkit-line-clamp': 2,
@@ -377,7 +375,6 @@ const useStyles = makeStyles((theme) => ({
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
-    margin: '0 auto', // 防止内容溢出
   },
   apiEndpointsContainer: {
     padding: theme.spacing(0, 2),
@@ -385,7 +382,6 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(1.5),
     maxHeight: '70px',
     overflow: 'hidden',
-    margin: '0 auto',
     '&:hover': {
       maxHeight: '90px',
       overflow: 'auto',
@@ -785,9 +781,8 @@ const useStyles = makeStyles((theme) => ({
     display: 'flex',
     flexWrap: 'wrap',
     gap: theme.spacing(0.5),
-    maxWidth: '70%', // 限制分类标签的宽
+    maxWidth: '70%', // 限制分类标签的宽度
     overflow: 'hidden',
-    margin: '0 auto',
   },
   apiCardActions: {
     display: 'flex',
@@ -963,7 +958,6 @@ const useStyles = makeStyles((theme) => ({
       '& span': {
         whiteSpace: 'nowrap',
         overflow: 'hidden',
-    margin: '0 auto',
         textOverflow: 'ellipsis',
       },
     },
@@ -983,7 +977,7 @@ const useStyles = makeStyles((theme) => ({
       color: theme.palette.primary.main,
     },
   },
-  categoryCount: {
+  categoryCountTree: {
     fontSize: '0.75rem',
     color: theme.palette.text.secondary,
     backgroundColor: 'rgba(0, 0, 0, 0.05)',
@@ -1016,7 +1010,6 @@ const useStyles = makeStyles((theme) => ({
         maxWidth: '180px',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
-    margin: '0 auto',
         textOverflow: 'ellipsis',
         display: 'inline-block',
       },
@@ -1032,7 +1025,6 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(0, 3),
     maxHeight: '85px',
     overflow: 'hidden',
-    margin: '0 auto',
   },
   apiTagsRow: {
     display: 'flex',
@@ -1060,7 +1052,6 @@ const useStyles = makeStyles((theme) => ({
     '& .MuiChip-label': {
       padding: theme.spacing(0, 0.8),
       overflow: 'hidden',
-    margin: '0 auto',
       textOverflow: 'ellipsis',
       whiteSpace: 'nowrap',
     },
@@ -1525,6 +1516,10 @@ const ApiCatalog = () => {
   const [selectedApiForLineage, setSelectedApiForLineage] = useState(null);
   const [apiImportDialogOpen, setApiImportDialogOpen] = useState(false);
   const [apiDetailDialogOpen, setApiDetailDialogOpen] = useState(false);
+
+  // 订阅情况对话框相关状态
+  const [subscriptionDialogOpen, setSubscriptionDialogOpen] = useState(false);
+  const [selectedApiForSubscription, setSelectedApiForSubscription] = useState(null);
 
   // 关闭编辑对话
   const handleEditDialogClose = () => {
@@ -2204,22 +2199,129 @@ const ApiCatalog = () => {
   // 获取API的订阅者数
   const getApiSubscribers = (apiId) => {
     // 模拟从订阅关系中获取数据
-    // 实际项目中，这应该是从API或状态管理中获取的数
+    // 实际项目中，这应该是从API或状态管理中获取的数据
     const mockSubscriptions = {
       'api1': [
-        { team: '数据科学团队', userId: 'user1', subscriptionDate: '2023-05-10' },
-        { team: '营销团队', userId: 'user2', subscriptionDate: '2023-05-12' },
-        { team: '数据科学团队', userId: 'user3', subscriptionDate: '2023-05-15' }
+        { 
+          team: '数据科学团队', 
+          userId: 'user1', 
+          userName: '张小明',
+          role: '数据分析师',
+          email: 'zhang.xiaoming@company.com',
+          subscriptionDate: '2023-05-10' 
+        },
+        { 
+          team: '营销团队', 
+          userId: 'user2', 
+          userName: '李小红',
+          role: '营销经理',
+          email: 'li.xiaohong@company.com',
+          subscriptionDate: '2023-05-12' 
+        },
+        { 
+          team: '数据科学团队', 
+          userId: 'user3', 
+          userName: '王小伟',
+          role: '高级数据工程师',
+          email: 'wang.xiaowei@company.com',
+          subscriptionDate: '2023-05-15' 
+        }
       ],
       'api2': [
-        { team: '财务团队', userId: 'user4', subscriptionDate: '2023-05-08' },
-        { team: '客户服务', userId: 'user5', subscriptionDate: '2023-05-11' }
+        { 
+          team: '财务团队', 
+          userId: 'user4', 
+          userName: '陈小丽',
+          role: '财务专员',
+          email: 'chen.xiaoli@company.com',
+          subscriptionDate: '2023-05-08' 
+        },
+        { 
+          team: '客户服务', 
+          userId: 'user5', 
+          userName: '刘小强',
+          role: '客服主管',
+          email: 'liu.xiaoqiang@company.com',
+          subscriptionDate: '2023-05-11' 
+        }
       ],
       'api3': [
-        { team: '产品团队', userId: 'user6', subscriptionDate: '2023-05-09' },
-        { team: '开发团队', userId: 'user7', subscriptionDate: '2023-05-13' },
-        { team: '测试团队', userId: 'user8', subscriptionDate: '2023-05-14' },
-        { team: '产品团队', userId: 'user9', subscriptionDate: '2023-05-16' }
+        { 
+          team: '产品团队', 
+          userId: 'user6', 
+          userName: '赵小敏',
+          role: '产品经理',
+          email: 'zhao.xiaomin@company.com',
+          subscriptionDate: '2023-05-09' 
+        },
+        { 
+          team: '开发团队', 
+          userId: 'user7', 
+          userName: '孙小军',
+          role: '前端开发工程师',
+          email: 'sun.xiaojun@company.com',
+          subscriptionDate: '2023-05-13' 
+        },
+        { 
+          team: '测试团队', 
+          userId: 'user8', 
+          userName: '周小雨',
+          role: '测试工程师',
+          email: 'zhou.xiaoyu@company.com',
+          subscriptionDate: '2023-05-14' 
+        },
+        { 
+          team: '产品团队', 
+          userId: 'user9', 
+          userName: '吴小飞',
+          role: '产品设计师',
+          email: 'wu.xiaofei@company.com',
+          subscriptionDate: '2023-05-16' 
+        }
+      ],
+      'api-4': [
+        { 
+          team: '支付团队', 
+          userId: 'user10', 
+          userName: '许小华',
+          role: '支付架构师',
+          email: 'xu.xiaohua@company.com',
+          subscriptionDate: '2023-05-07' 
+        },
+        { 
+          team: '风控团队', 
+          userId: 'user11', 
+          userName: '马小龙',
+          role: '风控专家',
+          email: 'ma.xiaolong@company.com',
+          subscriptionDate: '2023-05-12' 
+        },
+        { 
+          team: '财务团队', 
+          userId: 'user12', 
+          userName: '黄小玲',
+          role: '财务主管',
+          email: 'huang.xiaoling@company.com',
+          subscriptionDate: '2023-05-18' 
+        }
+      ],
+      'api-5': [
+        { 
+          team: '电商团队', 
+          userId: 'user13', 
+          userName: '林小波',
+          role: '电商运营',
+          email: 'lin.xiaobo@company.com',
+          subscriptionDate: '2023-05-06' 
+        },
+        { 
+          team: '推荐算法团队', 
+          userId: 'user14', 
+          userName: '郑小艳',
+          role: '算法工程师',
+          email: 'zheng.xiaoyan@company.com',
+          subscriptionDate: '2023-05-10' 
+        }
       ]
     };
     
@@ -2245,11 +2347,17 @@ const ApiCatalog = () => {
     
     if (totalSubscribers === 0) {
       return (
-        <Tooltip title="暂无团队订阅">
-          <div className={classes.noSubscribersIndicator}>
-            <TeamIcon fontSize="small" color="disabled" />
-            <Typography variant="caption" color="textSecondary">0</Typography>
-          </div>
+        <Tooltip title="暂无团队订阅，点击查看详情">
+          <IconButton
+            size="small"
+            className={classes.apiCardAction}
+            onClick={(e) => handleOpenSubscriptionDialog(api, e)}
+          >
+            <div className={classes.noSubscribersIndicator}>
+              <TeamIcon fontSize="small" color="disabled" />
+              <Typography variant="caption" color="textSecondary">0</Typography>
+            </div>
+          </IconButton>
         </Tooltip>
       );
     }
@@ -2263,22 +2371,32 @@ const ApiCatalog = () => {
               {totalSubscribers}个订阅/ {uniqueTeams.length}个团队
             </Typography>
             <div>
-              {uniqueTeams.map((team, idx) => (
+              {uniqueTeams.slice(0, 3).map((team, idx) => (
                 <div key={idx}>{team} ({subscribers.filter(s => s.team === team).length})</div>
               ))}
+              {uniqueTeams.length > 3 && <div>还有 {uniqueTeams.length - 3} 个团队...</div>}
             </div>
+            <Typography variant="caption" style={{ marginTop: 8, fontStyle: 'italic' }}>
+              点击查看详细信息
+            </Typography>
           </div>
         }
       >
-        <div className={classes.subscribersIndicator}>
-          <TeamIcon 
-            fontSize="small" 
-            color={uniqueTeams.length > 2 ? "primary" : "action"} 
-          />
-          <Typography variant="caption" color="textPrimary">
-            {uniqueTeams.length}
-          </Typography>
-        </div>
+        <IconButton
+          size="small"
+          className={classes.apiCardAction}
+          onClick={(e) => handleOpenSubscriptionDialog(api, e)}
+        >
+          <div className={classes.subscribersIndicator}>
+            <TeamIcon 
+              fontSize="small" 
+              color={uniqueTeams.length > 2 ? "primary" : "action"} 
+            />
+            <Typography variant="caption" color="textPrimary">
+              {uniqueTeams.length}
+            </Typography>
+          </div>
+        </IconButton>
       </Tooltip>
     );
   };
@@ -2294,7 +2412,6 @@ const ApiCatalog = () => {
       <Card 
         key={api.id} 
         className={classes.apiCard}
-        onClick={() => handleSelectApi(api)}
       >
         <div className={classes.apiCardTopBar}></div>
         <CardContent className={classes.apiCardContent}>
@@ -2401,6 +2518,18 @@ const ApiCatalog = () => {
               )}
             </div>
             <div className={classes.apiCardActions}>
+              <Tooltip title="查看API详情">
+                <IconButton 
+                  size="small" 
+                  className={classes.apiCardAction}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSelectApi(api);
+                  }}
+                >
+                  <VisibilityIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
               {renderSubscribers(api)}
               <Tooltip title="查看API血缘关系">
                 <IconButton 
@@ -2497,6 +2626,21 @@ const ApiCatalog = () => {
     setApiDetailDialogOpen(false);
   };
 
+  // 打开订阅情况对话框
+  const handleOpenSubscriptionDialog = (api, event) => {
+    if (event) {
+      event.stopPropagation();
+    }
+    setSelectedApiForSubscription(api);
+    setSubscriptionDialogOpen(true);
+  };
+
+  // 关闭订阅情况对话框
+  const handleCloseSubscriptionDialog = () => {
+    setSubscriptionDialogOpen(false);
+    setSelectedApiForSubscription(null);
+  };
+
   return (
     <div className={classes.root}>
       {/* 头部区域 */}
@@ -2540,38 +2684,39 @@ const ApiCatalog = () => {
       </Paper>
 
       <Container maxWidth="xl">
-        <Grid container spacing={3}>
-          {/* 左侧面板 - 包含筛选器和分类 */}
-          <Grid item xs={12} md={4} lg={3}>
-            {/* 筛选器 */}
-            <ApiFilter
-              // 筛选状态
-              accessLevelFilter={accessLevelFilter}
-              dataFieldFilters={dataFieldFilters}
-              themeFilters={themeFilters}
-              serviceFilters={serviceFilters}
-              industryFilters={industryFilters}
-              methodFilters={methodFilters}
-              responseTimeFilter={responseTimeFilter}
-              startDate={startDate}
-              endDate={endDate}
-              activeFilters={activeFilters}
-              allApiMethods={allApiMethods}
-              
-              // 筛选处理函数
-              onAccessLevelFilterChange={handleAccessLevelFilterChange}
-              onFilterChange={handleFilterChange}
-              onMethodFilterChange={handleMethodFilterChange}
-              onResponseTimeFilterChange={setResponseTimeFilter}
-              onDateChange={(field, value) => {
-                if (field === 'startDate') setStartDate(value);
-                if (field === 'endDate') setEndDate(value);
-              }}
-              onClearAllFilters={handleClearAllFilters}
-            />
+        {/* 顶部筛选器区域 */}
+        <Paper style={{ marginBottom: 24, padding: 0 }} elevation={2}>
+          <ApiFilter
+            // 筛选状态
+            accessLevelFilter={accessLevelFilter}
+            dataFieldFilters={dataFieldFilters}
+            themeFilters={themeFilters}
+            serviceFilters={serviceFilters}
+            industryFilters={industryFilters}
+            methodFilters={methodFilters}
+            responseTimeFilter={responseTimeFilter}
+            startDate={startDate}
+            endDate={endDate}
+            activeFilters={activeFilters}
+            allApiMethods={allApiMethods}
             
-            {/* 分类面板 */}
-            <Paper className={classes.leftPanel} style={{ marginTop: 16 }}>
+            // 筛选处理函数
+            onAccessLevelFilterChange={handleAccessLevelFilterChange}
+            onFilterChange={handleFilterChange}
+            onMethodFilterChange={handleMethodFilterChange}
+            onResponseTimeFilterChange={setResponseTimeFilter}
+            onDateChange={(field, value) => {
+              if (field === 'startDate') setStartDate(value);
+              if (field === 'endDate') setEndDate(value);
+            }}
+            onClearAllFilters={handleClearAllFilters}
+          />
+        </Paper>
+
+        <Grid container spacing={3}>
+          {/* 左侧 - API分类面板 */}
+          <Grid item xs={12} md={3} lg={3}>
+            <Paper className={classes.leftPanel}>
               <div className={classes.stickyListHeader}>
                 <Typography className={classes.headerTitleText}>
                   <CategoryIcon style={{ marginRight: 8 }} /> API分类
@@ -2592,8 +2737,8 @@ const ApiCatalog = () => {
             </Paper>
           </Grid>
 
-          {/* 右侧内容面板 - 只包含API列表 */}
-          <Grid item xs={12} md={8} lg={9}>
+          {/* 右侧 - API列表面板 */}
+          <Grid item xs={12} md={9} lg={9}>
             <Paper className={classes.rightPanel}>
               {/* API统计信息栏 */}
               <Box className={classes.rightPanelHeader}>
@@ -2771,6 +2916,14 @@ const ApiCatalog = () => {
         open={apiDetailDialogOpen}
         onClose={handleCloseApiDetailDialog}
         api={selectedApi}
+      />
+
+      {/* 订阅情况对话框 */}
+      <ApiSubscriptionDialog
+        open={subscriptionDialogOpen}
+        onClose={handleCloseSubscriptionDialog}
+        api={selectedApiForSubscription}
+        subscribers={selectedApiForSubscription ? getApiSubscribers(selectedApiForSubscription.id) : []}
       />
     </div>
   );

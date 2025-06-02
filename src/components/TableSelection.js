@@ -85,7 +85,7 @@ const useStyles = makeStyles((theme) => ({
   }
 }));
 
-function TableSelection({ onSelect, onBack, toggleJoinMode, connection }) {
+function TableSelection({ onSelect, onBack, onTablesLoad, toggleJoinMode, connection }) {
   const classes = useStyles();
   const [tables, setTables] = useState([]);
   const [selectedTable, setSelectedTable] = useState(null);
@@ -109,6 +109,12 @@ function TableSelection({ onSelect, onBack, toggleJoinMode, connection }) {
       setIsLoading(true);
       const tablesData = await DatabaseTableService.getTables(connection);
       setTables(tablesData);
+      
+      // 调用回调函数传递表数据
+      if (onTablesLoad) {
+        onTablesLoad(tablesData);
+      }
+      
       setIsLoading(false);
     } catch (error) {
       setNotification({

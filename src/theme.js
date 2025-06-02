@@ -381,7 +381,7 @@ export const lightTheme = createTheme({
     },
     MuiDrawer: {
       paper: {
-        backgroundColor: colorPalette.black.main,
+        backgroundColor: colorPalette.black.dark,
       },
     },
   },

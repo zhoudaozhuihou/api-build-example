@@ -21,7 +21,13 @@ import {
   FormControl,
   InputLabel,
   Chip,
-  CircularProgress
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Tooltip,
+  Fab
 } from '@material-ui/core';
 import { 
   ArrowBack, 
@@ -31,7 +37,8 @@ import {
   Storage as DatabaseIcon,
   Link as LinkIcon,
   Edit as EditIcon,
-  PublishOutlined as PublishIcon
+  PublishOutlined as PublishIcon,
+  PlaylistAdd as BatchIcon
 } from '@material-ui/icons';
 import { useSelector, useDispatch } from 'react-redux';
 import { useHistory } from 'react-router-dom';
@@ -42,8 +49,10 @@ import SqlEditor from '../components/SqlEditor';
 import ApiDetailsEditor from '../components/ApiDetailsEditor';
 import ApiList from '../components/ApiList';
 import JoinTablesBuilder from '../components/JoinTablesBuilder';
+import ApiBatchCreator from '../components/ApiBatchCreator';
 import { API_TYPES, createApi } from '../redux/slices/apiSlice';
 import { selectAllDatasets, linkApiToDataset } from '../redux/slices/datasetSlice';
+import ParameterDemoService from '../services/ParameterDemoService';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -162,6 +171,8 @@ function LowCode() {
   const [datasetsFilter, setDatasetsFilter] = useState('all');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedConnection, setSelectedConnection] = useState(null);
+  const [showBatchCreator, setShowBatchCreator] = useState(false);
+  const [availableTables, setAvailableTables] = useState([]);
   
   // 从Redux获取数据集数据
   const datasets = useSelector(selectAllDatasets) || [];
@@ -324,6 +335,59 @@ function LowCode() {
     }
   };
 
+  // 批量创建API处理函数
+  const handleBatchCreate = async (apiConfig) => {
+    try {
+      // 构建完整的API配置
+      const fullApiConfig = {
+        name: apiConfig.name,
+        method: apiConfig.method,
+        path: apiConfig.path,
+        description: apiConfig.description,
+        categories: apiConfig.categories,
+        sourceType: buildMode === 'database' ? 'database' : 'dataset',
+        type: buildMode === 'database' ? API_TYPES.LOWCODE_DB : API_TYPES.LOWCODE_DS,
+        isDatasetBound: buildMode === 'dataset',
+        datasetId: buildMode === 'dataset' ? apiConfig.sourceItem.id : null,
+        connectionId: selectedConnection?.id,
+        selectedTable: buildMode === 'database' ? apiConfig.sourceItem : null,
+      };
+
+      // 如果启用自动生成参数
+      if (apiConfig.autoGenerateParams && buildMode === 'database') {
+        const paramSuggestions = ParameterDemoService.generateParameterSuggestions(apiConfig.sourceItem);
+        fullApiConfig.inputParameters = paramSuggestions.inputs || [];
+        fullApiConfig.outputParameters = paramSuggestions.outputs || [];
+      }
+
+      // 创建API
+      const result = await dispatch(createApi(fullApiConfig)).unwrap();
+      
+      // 如果基于数据集构建，关联API到数据集
+      if (fullApiConfig.isDatasetBound && fullApiConfig.datasetId) {
+        await dispatch(linkApiToDataset({
+          datasetId: fullApiConfig.datasetId,
+          apiId: result.id
+        })).unwrap();
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Error creating API:', error);
+      throw error;
+    }
+  };
+
+  // 打开批量创建对话框
+  const handleOpenBatchCreator = () => {
+    setShowBatchCreator(true);
+  };
+
+  // 关闭批量创建对话框
+  const handleCloseBatchCreator = () => {
+    setShowBatchCreator(false);
+  };
+
   const filteredDatasets = datasetsFilter === 'all' 
     ? datasets 
     : datasets.filter(ds => ds.type === datasetsFilter);
@@ -477,6 +541,9 @@ function LowCode() {
                   tables: [table],
                 });
                 handleNext();
+              }}
+              onTablesLoad={(tables) => {
+                setAvailableTables(tables);
               }}
               toggleJoinMode={toggleJoinMode}
               connection={selectedConnection}
@@ -715,6 +782,36 @@ function LowCode() {
       <div className={classes.contentContainer}>
         {getStepContent(activeStep)}
       </div>
+
+      {/* 批量创建API的浮动按钮 */}
+      {(buildMode === 'database' && selectedConnection && availableTables.length > 0) ||
+       (buildMode === 'dataset' && datasets.length > 0) ? (
+        <Tooltip title="批量创建API" placement="left">
+          <Fab
+            color="secondary"
+            aria-label="batch-create"
+            onClick={handleOpenBatchCreator}
+            style={{
+              position: 'fixed',
+              bottom: 16,
+              right: 16,
+              zIndex: 1000
+            }}
+          >
+            <BatchIcon />
+          </Fab>
+        </Tooltip>
+      ) : null}
+
+      {/* 批量创建API对话框 */}
+      <ApiBatchCreator
+        open={showBatchCreator}
+        onClose={handleCloseBatchCreator}
+        onBatchCreate={handleBatchCreate}
+        availableTables={availableTables}
+        availableDatasets={datasets}
+        sourceType={buildMode}
+      />
     </Container>
   );
 }

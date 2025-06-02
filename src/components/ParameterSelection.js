@@ -191,55 +191,111 @@ function ParameterSelection({ onNext, onBack, apiConfig, updateApiConfig }) {
   
   // 加载初始参数
   useEffect(() => {
+    console.log('ParameterSelection useEffect triggered, apiConfig:', apiConfig);
     loadDemoParameters();
   }, [apiConfig]);
 
   // 加载演示参数数据
-  const loadDemoParameters = () => {
+  const loadDemoParameters = async () => {
+    console.log('开始加载参数，当前 apiConfig:', apiConfig);
     setIsLoading(true);
     
     try {
       // 基于表结构生成建议的参数
-      if (apiConfig.selectedTable) {
-        setTimeout(() => {
-          // 模拟API调用延迟
-          let paramSuggestions;
-          
-          // 检查是否是多表连接
-          if (apiConfig.joins && apiConfig.joins.length > 0 && apiConfig.tables && apiConfig.tables.length > 1) {
-            paramSuggestions = ParameterDemoService.generateJoinParameters(apiConfig.tables, apiConfig.joins);
-          } else {
-            paramSuggestions = ParameterDemoService.generateParameterSuggestions(apiConfig.selectedTable);
-          }
-          
-          setInputParams(paramSuggestions.inputs);
-          setOutputParams(paramSuggestions.outputs);
-          setIsLoading(false);
-          
-          // 更新API配置
-          if (updateApiConfig) {
-            updateApiConfig({
-              inputParameters: paramSuggestions.inputs,
-              outputParameters: paramSuggestions.outputs
-            });
-          }
-        }, 1000);
+      if (apiConfig.selectedTable || (apiConfig.tables && apiConfig.tables.length > 0)) {
+        console.log('找到表信息，开始生成参数');
+        // 减少延迟时间并使用 Promise 替代 setTimeout
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        let paramSuggestions;
+        
+        // 检查是否是多表连接
+        if (apiConfig.joins && apiConfig.joins.length > 0 && apiConfig.tables && apiConfig.tables.length > 1) {
+          console.log('生成多表连接参数');
+          paramSuggestions = ParameterDemoService.generateJoinParameters(apiConfig.tables, apiConfig.joins);
+        } else if (apiConfig.selectedTable) {
+          // 单表模式
+          console.log('生成单表参数，表:', apiConfig.selectedTable.name);
+          paramSuggestions = ParameterDemoService.generateParameterSuggestions(apiConfig.selectedTable);
+        } else if (apiConfig.tables && apiConfig.tables.length > 0) {
+          // 如果没有selectedTable但有tables数组，使用第一个表
+          console.log('使用tables数组第一个表生成参数，表:', apiConfig.tables[0].name);
+          paramSuggestions = ParameterDemoService.generateParameterSuggestions(apiConfig.tables[0]);
+        } else {
+          // 没有表信息时返回空参数
+          console.log('没有表信息，返回空参数');
+          paramSuggestions = { inputs: [], outputs: [] };
+        }
+        
+        console.log('生成的参数建议:', paramSuggestions);
+        
+        // 确保参数数组存在
+        const inputs = paramSuggestions.inputs || [];
+        const outputs = paramSuggestions.outputs || [];
+        
+        setInputParams(inputs);
+        setOutputParams(outputs);
+        
+        // 更新API配置
+        if (updateApiConfig) {
+          updateApiConfig({
+            inputParameters: inputs,
+            outputParameters: outputs
+          });
+        }
+        
+        // 显示成功消息
+        if (inputs.length > 0 || outputs.length > 0) {
+          setNotification({
+            open: true,
+            message: `成功加载 ${inputs.length} 个输入参数和 ${outputs.length} 个输出参数`,
+            severity: 'success',
+          });
+        } else {
+          setNotification({
+            open: true,
+            message: '未生成任何参数，请检查表结构',
+            severity: 'warning',
+          });
+        }
       } else {
-        setIsLoading(false);
+        console.log('没有表信息，显示警告');
+        // 没有表信息时显示警告
         setNotification({
           open: true,
           message: '无法加载参数，请先选择表格',
-          severity: 'error',
+          severity: 'warning',
         });
+        // 设置空参数
+        setInputParams([]);
+        setOutputParams([]);
+        if (updateApiConfig) {
+          updateApiConfig({
+            inputParameters: [],
+            outputParameters: []
+          });
+        }
       }
     } catch (error) {
       console.error('Error loading parameters:', error);
-      setIsLoading(false);
       setNotification({
         open: true,
         message: error.message || '加载参数时出错',
         severity: 'error',
       });
+      // 设置空参数作为后备
+      setInputParams([]);
+      setOutputParams([]);
+      if (updateApiConfig) {
+        updateApiConfig({
+          inputParameters: [],
+          outputParameters: []
+        });
+      }
+    } finally {
+      // 确保无论如何都会结束加载状态
+      setIsLoading(false);
+      console.log('参数加载完成');
     }
   };
 
@@ -314,7 +370,7 @@ function ParameterSelection({ onNext, onBack, apiConfig, updateApiConfig }) {
 
   const handleSaveParameter = () => {
     // 验证参数
-    if (!newParam.name) {
+    if (!newParam.name || newParam.name.trim() === '') {
       setNotification({
         open: true,
         message: '参数名称不能为空',
@@ -323,43 +379,96 @@ function ParameterSelection({ onNext, onBack, apiConfig, updateApiConfig }) {
       return;
     }
 
-    if (tabValue === 0) {
-      // 保存输入参数
-      const updatedParams = isEditing
-        ? inputParams.map((p) => (p.id === newParam.id ? newParam : p))
-        : [...inputParams, newParam];
-        
-      setInputParams(updatedParams);
-      
-      // 更新API配置
-      if (updateApiConfig) {
-        updateApiConfig({
-          inputParameters: updatedParams
-        });
-      }
-    } else {
-      // 保存输出参数
-      const updatedParams = isEditing
-        ? outputParams.map((p) => (p.id === newParam.id ? newParam : p))
-        : [...outputParams, newParam];
-        
-      setOutputParams(updatedParams);
-      
-      // 更新API配置
-      if (updateApiConfig) {
-        updateApiConfig({
-          outputParameters: updatedParams
-        });
-      }
+    // 检查参数名称是否重复
+    const currentParams = tabValue === 0 ? inputParams : outputParams;
+    const isDuplicate = currentParams.some(param => 
+      param.name === newParam.name.trim() && 
+      (!isEditing || param.id !== newParam.id)
+    );
+
+    if (isDuplicate) {
+      setNotification({
+        open: true,
+        message: '参数名称已存在，请使用不同的名称',
+        severity: 'error',
+      });
+      return;
     }
 
-    setIsEditing(false);
-    setSelectedParam(newParam);
-    setNotification({
-      open: true,
-      message: isEditing ? '参数已更新' : '参数已添加',
-      severity: 'success',
-    });
+    // 验证必要字段
+    if (tabValue === 0 && !newParam.location) {
+      setNotification({
+        open: true,
+        message: '请选择参数位置',
+        severity: 'error',
+      });
+      return;
+    }
+
+    try {
+      // 确保id存在
+      const paramToSave = {
+        ...newParam,
+        name: newParam.name.trim(),
+        id: newParam.id || `param_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      };
+
+      if (tabValue === 0) {
+        // 保存输入参数
+        const updatedParams = isEditing
+          ? inputParams.map((p) => (p.id === paramToSave.id ? paramToSave : p))
+          : [...inputParams, paramToSave];
+          
+        setInputParams(updatedParams);
+        
+        // 更新API配置
+        if (updateApiConfig) {
+          updateApiConfig({
+            inputParameters: updatedParams
+          });
+        }
+      } else {
+        // 保存输出参数
+        const updatedParams = isEditing
+          ? outputParams.map((p) => (p.id === paramToSave.id ? paramToSave : p))
+          : [...outputParams, paramToSave];
+          
+        setOutputParams(updatedParams);
+        
+        // 更新API配置
+        if (updateApiConfig) {
+          updateApiConfig({
+            outputParameters: updatedParams
+          });
+        }
+      }
+
+      // 重置编辑状态
+      setIsEditing(false);
+      setSelectedParam(paramToSave);
+      setNewParam({
+        name: '',
+        type: 'string',
+        location: 'query',
+        required: false,
+        description: '',
+        defaultValue: '',
+        validationRules: [],
+      });
+
+      setNotification({
+        open: true,
+        message: isEditing ? '参数已更新' : '参数已添加',
+        severity: 'success',
+      });
+    } catch (error) {
+      console.error('Error saving parameter:', error);
+      setNotification({
+        open: true,
+        message: '保存参数时发生错误',
+        severity: 'error',
+      });
+    }
   };
 
   const handleCancelEdit = () => {
@@ -476,14 +585,25 @@ function ParameterSelection({ onNext, onBack, apiConfig, updateApiConfig }) {
           onChange={(e) => setFilterText(e.target.value)}
           style={{ width: 300 }}
         />
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          onClick={handleAddParameter}
-        >
-          添加参数
-        </Button>
+        <Box>
+          <Button
+            variant="outlined"
+            onClick={loadDemoParameters}
+            disabled={isLoading}
+            style={{ marginRight: 8 }}
+            startIcon={isLoading ? <CircularProgress size={14} /> : <InfoIcon />}
+          >
+            {isLoading ? '加载中...' : '重新加载参数'}
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={handleAddParameter}
+          >
+            添加参数
+          </Button>
+        </Box>
       </div>
 
       <Tabs
@@ -573,8 +693,30 @@ function ParameterSelection({ onNext, onBack, apiConfig, updateApiConfig }) {
                   ))}
                   {(tabValue === 0 ? filteredInputParams.length === 0 : filteredOutputParams.length === 0) && !isLoading && (
                     <TableRow>
-                      <TableCell colSpan={tabValue === 0 ? 6 : 4} align="center">
-                        没有找到参数
+                      <TableCell colSpan={tabValue === 0 ? 6 : 4} align="center" style={{ padding: '40px 16px' }}>
+                        {(tabValue === 0 ? inputParams.length === 0 : outputParams.length === 0) ? (
+                          <Box>
+                            <InfoIcon style={{ fontSize: 48, color: '#bdbdbd', marginBottom: 16 }} />
+                            <Typography variant="h6" color="textSecondary">
+                              暂无{tabValue === 0 ? '输入' : '输出'}参数
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary" style={{ marginTop: 8 }}>
+                              {apiConfig.selectedTable || (apiConfig.tables && apiConfig.tables.length > 0) 
+                                ? '点击"重新加载参数"按钮重试，或手动添加参数'
+                                : '请先选择数据表，然后系统会自动生成参数建议'
+                              }
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <Box>
+                            <Typography variant="body1" color="textSecondary">
+                              没有找到匹配 "{filterText}" 的参数
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary" style={{ marginTop: 4 }}>
+                              尝试更改搜索条件或清空搜索框
+                            </Typography>
+                          </Box>
+                        )}
                       </TableCell>
                     </TableRow>
                   )}

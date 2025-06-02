@@ -1,0 +1,374 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "用户管理API",
+    "version": "1.0.0",
+    "description": "用户管理系统的API接口文档"
+  },
+  "host": "api.example.com",
+  "basePath": "/v1",
+  "schemes": ["https"],
+  "paths": {
+    "/users": {
+      "get": {
+        "summary": "获取用户列表",
+        "description": "分页获取用户列表，支持搜索和筛选",
+        "tags": ["用户管理", "查询"],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "type": "integer",
+            "description": "页码，从1开始",
+            "required": false,
+            "example": 1
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "type": "integer",
+            "description": "每页数量，默认20",
+            "required": false,
+            "example": 20
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "type": "string",
+            "description": "搜索关键词",
+            "required": false,
+            "example": "张三"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "type": "string",
+            "description": "用户状态筛选",
+            "required": false,
+            "enum": ["active", "inactive", "pending"],
+            "example": "active"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取用户列表",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": {
+                    "users": [
+                      {
+                        "id": "user123",
+                        "username": "zhangsan",
+                        "email": "zhangsan@example.com",
+                        "name": "张三",
+                        "status": "active",
+                        "profile": {
+                          "avatar": "https://example.com/avatar.jpg",
+                          "phone": "13800138000",
+                          "department": "技术部",
+                          "role": "开发工程师"
+                        },
+                        "createdAt": "2023-01-15T08:30:00Z",
+                        "lastLoginAt": "2023-06-15T14:20:00Z"
+                      }
+                    ],
+                    "pagination": {
+                      "page": 1,
+                      "pageSize": 20,
+                      "total": 150,
+                      "totalPages": 8
+                    }
+                  },
+                  "message": "获取用户列表成功"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "未授权访问"
+          }
+        }
+      },
+      "post": {
+        "summary": "创建新用户",
+        "description": "创建一个新的用户账户",
+        "tags": ["用户管理", "创建"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["username", "email", "name"],
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "description": "用户名，唯一标识"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "邮箱地址"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "真实姓名"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "密码，至少8位"
+                  },
+                  "profile": {
+                    "type": "object",
+                    "properties": {
+                      "phone": {
+                        "type": "string",
+                        "description": "手机号码"
+                      },
+                      "department": {
+                        "type": "string",
+                        "description": "部门"
+                      },
+                      "role": {
+                        "type": "string",
+                        "description": "职位"
+                      }
+                    }
+                  }
+                }
+              },
+              "example": {
+                "username": "lisi",
+                "email": "lisi@example.com",
+                "name": "李四",
+                "password": "password123",
+                "profile": {
+                  "phone": "13900139000",
+                  "department": "产品部",
+                  "role": "产品经理"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "用户创建成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": {
+                    "user": {
+                      "id": "user124",
+                      "username": "lisi",
+                      "email": "lisi@example.com",
+                      "name": "李四",
+                      "status": "pending",
+                      "profile": {
+                        "phone": "13900139000",
+                        "department": "产品部",
+                        "role": "产品经理"
+                      },
+                      "createdAt": "2023-06-15T16:30:00Z"
+                    }
+                  },
+                  "message": "用户创建成功"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "409": {
+            "description": "用户名或邮箱已存在"
+          }
+        }
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "summary": "获取用户详情",
+        "description": "根据用户ID获取用户详细信息",
+        "tags": ["用户管理", "查询"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "用户ID",
+            "example": "user123"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取用户详情",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": {
+                    "user": {
+                      "id": "user123",
+                      "username": "zhangsan",
+                      "email": "zhangsan@example.com",
+                      "name": "张三",
+                      "status": "active",
+                      "profile": {
+                        "avatar": "https://example.com/avatar.jpg",
+                        "phone": "13800138000",
+                        "department": "技术部",
+                        "role": "开发工程师",
+                        "bio": "资深前端开发工程师，专注于React和Vue技术栈",
+                        "skills": ["JavaScript", "React", "Vue", "Node.js"],
+                        "location": "北京市朝阳区"
+                      },
+                      "permissions": {
+                        "canEdit": true,
+                        "canDelete": false,
+                        "canViewSensitive": true
+                      },
+                      "statistics": {
+                        "loginCount": 245,
+                        "lastActiveProjects": ["project-1", "project-3"],
+                        "contributionScore": 850
+                      },
+                      "createdAt": "2023-01-15T08:30:00Z",
+                      "updatedAt": "2023-06-10T11:45:00Z",
+                      "lastLoginAt": "2023-06-15T14:20:00Z"
+                    }
+                  },
+                  "message": "获取用户详情成功"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "用户不存在"
+          },
+          "401": {
+            "description": "未授权访问"
+          }
+        }
+      },
+      "put": {
+        "summary": "更新用户信息",
+        "description": "更新指定用户的信息",
+        "tags": ["用户管理", "更新"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "用户ID",
+            "example": "user123"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "name": "张三丰",
+                "profile": {
+                  "phone": "13800138001",
+                  "department": "技术部",
+                  "role": "高级开发工程师",
+                  "bio": "全栈开发工程师，技术栈涵盖前后端",
+                  "skills": ["JavaScript", "React", "Vue", "Node.js", "Python"],
+                  "location": "北京市海淀区"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "用户信息更新成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "data": {
+                    "user": {
+                      "id": "user123",
+                      "username": "zhangsan",
+                      "email": "zhangsan@example.com",
+                      "name": "张三丰",
+                      "status": "active",
+                      "profile": {
+                        "avatar": "https://example.com/avatar.jpg",
+                        "phone": "13800138001",
+                        "department": "技术部",
+                        "role": "高级开发工程师",
+                        "bio": "全栈开发工程师，技术栈涵盖前后端",
+                        "skills": ["JavaScript", "React", "Vue", "Node.js", "Python"],
+                        "location": "北京市海淀区"
+                      },
+                      "updatedAt": "2023-06-15T16:45:00Z"
+                    }
+                  },
+                  "message": "用户信息更新成功"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "404": {
+            "description": "用户不存在"
+          },
+          "401": {
+            "description": "未授权访问"
+          }
+        }
+      },
+      "delete": {
+        "summary": "删除用户",
+        "description": "删除指定的用户账户",
+        "tags": ["用户管理", "删除"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "type": "string",
+            "required": true,
+            "description": "用户ID",
+            "example": "user123"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "用户删除成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": true,
+                  "message": "用户删除成功"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "用户不存在"
+          },
+          "401": {
+            "description": "未授权访问"
+          },
+          "403": {
+            "description": "权限不足"
+          }
+        }
+      }
+    }
+  }
+} 
