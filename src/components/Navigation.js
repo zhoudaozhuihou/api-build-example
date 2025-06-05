@@ -169,6 +169,15 @@ function Navigation() {
               <span className={classes.buttonText}>通用组件演示</span>
             </Button>
           </Link>
+          <Link to="/dataset-search-demo" className={classes.link}>
+            <Button 
+              color="inherit" 
+              className={isActive('/dataset-search-demo') ? classes.activeButton : ''}
+              startIcon={<CategoryIcon />}
+            >
+              <span className={classes.buttonText}>数据集搜索演示</span>
+            </Button>
+          </Link>
         </Toolbar>
       </AppBar>
     </div>

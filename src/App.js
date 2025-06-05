@@ -16,6 +16,7 @@ import DeveloperHomePage from './pages/DeveloperHomePage';
 import CategorySelectorDemo from './components/CategorySelectorDemo';
 import JsonTableDemo from './pages/JsonTableDemo';
 import JsonComponentDemo from './pages/JsonComponentDemo';
+import DatasetSearchDemo from './pages/DatasetSearchDemo';
 
 // 新增页面组件
 import DatasetsPage from './pages/DatasetsPage';
@@ -151,6 +152,9 @@ function AppContent() {
               </Route>
               <Route path="/json-component-demo">
                 <JsonComponentDemo />
+              </Route>
+              <Route path="/dataset-search-demo">
+                <DatasetSearchDemo />
               </Route>
               
               {/* 统一管理控制台路由 - 替换所有原有分散的管理页面 */}
