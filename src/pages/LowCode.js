@@ -44,6 +44,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import DatabaseConnection from '../components/DatabaseConnection';
 import TableSelection from '../components/TableSelection';
+import TableToDatasetBinding from '../components/TableToDatasetBinding';
+import DatasetCreationWizard from '../components/DatasetCreationWizard';
 import ParameterSelection from '../components/ParameterSelection';
 import SqlEditor from '../components/SqlEditor';
 import ApiDetailsEditor from '../components/ApiDetailsEditor';
@@ -53,6 +55,7 @@ import ApiBatchCreator from '../components/ApiBatchCreator';
 import { API_TYPES, createApi } from '../redux/slices/apiSlice';
 import { selectAllDatasets, linkApiToDataset } from '../redux/slices/datasetSlice';
 import ParameterDemoService from '../services/ParameterDemoService';
+import DatasetManagementService from '../services/DatasetManagementService';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -122,20 +125,20 @@ const useStyles = makeStyles((theme) => ({
   }
 }));
 
-// API构建工作流步骤配置
-const databaseSteps = [
-  { label: '数据库连接', key: 'connection' },
-  { label: '表格选择', key: 'tables' },
-  { label: '参数选择', key: 'parameters' },
+// API构建工作流步骤配置 - 统一为基于Dataset的流程
+const apiBuilderSteps = [
+  { label: '选择数据集', key: 'dataset-selection' },
+  { label: '参数配置', key: 'parameters' },
   { label: 'SQL 编辑', key: 'sql' },
   { label: 'API 详情', key: 'details' },
 ];
 
-const datasetSteps = [
-  { label: '数据集选择', key: 'dataset' },
-  { label: '数据接口配置', key: 'interface' },
-  { label: '参数映射', key: 'parameters' },
-  { label: 'API 详情', key: 'details' },
+// Dataset创建步骤
+const datasetCreationSteps = [
+  { label: '数据库连接', key: 'connection' },
+  { label: '选择数据表', key: 'table-selection' },
+  { label: 'Dataset 元数据', key: 'metadata' },
+  { label: '确认创建', key: 'confirmation' },
 ];
 
 function TabPanel(props) {
@@ -163,19 +166,32 @@ function LowCode() {
   const dispatch = useDispatch();
   const history = useHistory();
   
-  const [buildMode, setBuildMode] = useState(null); // 'database' or 'dataset'
+  // 主要状态 - 简化为单一流程
   const [activeStep, setActiveStep] = useState(0);
-  const [useJoinTables, setUseJoinTables] = useState(false);
+  const [datasetCreationMode, setDatasetCreationMode] = useState(false); // 是否在创建Dataset模式
   const [tabValue, setTabValue] = useState(0);
   const [selectedDataset, setSelectedDataset] = useState(null);
   const [datasetsFilter, setDatasetsFilter] = useState('all');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Dataset创建相关状态
   const [selectedConnection, setSelectedConnection] = useState(null);
+  const [selectedTable, setSelectedTable] = useState(null);
+  const [newDatasetMetadata, setNewDatasetMetadata] = useState({
+    name: '',
+    description: '',
+    category: 'project',
+    tags: [],
+    isPublic: false,
+  });
+  
+  // 其他状态
+  const [useJoinTables, setUseJoinTables] = useState(false);
   const [showBatchCreator, setShowBatchCreator] = useState(false);
   const [availableTables, setAvailableTables] = useState([]);
   
   // 从Redux获取数据集数据
-  const datasets = useSelector(selectAllDatasets) || [];
+  const datasets = useSelector(state => state.datasets.datasets) || [];
   
   const [apiConfig, setApiConfig] = useState({
     name: '',
@@ -199,7 +215,7 @@ function LowCode() {
   });
 
   const handleNext = () => {
-    const steps = buildMode === 'database' ? databaseSteps : datasetSteps;
+    const steps = datasetCreationMode ? datasetCreationSteps : apiBuilderSteps;
     const nextStep = activeStep + 1;
     if (nextStep < steps.length) {
       setActiveStep(nextStep);
@@ -212,7 +228,7 @@ function LowCode() {
       setActiveStep(prevStep);
     } else if (prevStep === -1) {
       // 返回到构建方式选择
-      setBuildMode(null);
+      setDatasetCreationMode(false);
     }
   };
 
@@ -240,73 +256,26 @@ function LowCode() {
     setTabValue(newValue);
   };
 
+  // 处理Dataset选择 - 如果选择了现有Dataset
   const handleDatasetSelect = (dataset) => {
     setSelectedDataset(dataset);
     updateApiConfig({
       datasetId: dataset.id,
-      name: `${dataset.name} API`,
-      description: `基于${dataset.name}的API接口`,
+      name: `${dataset.name}_api`,
+      description: `基于数据集 ${dataset.name} 的API`,
       sourceType: 'dataset',
       type: API_TYPES.LOWCODE_DS,
       isDatasetBound: true,
     });
   };
 
-  const handleBuildModeSelect = (mode) => {
-    setBuildMode(mode);
-    setActiveStep(0);
-    
-    // 设置API类型
-    if (mode === 'database') {
-      updateApiConfig({
-        sourceType: 'database',
-        type: API_TYPES.LOWCODE_DB,
-        isDatasetBound: false,
-        datasetId: null
-      });
-    } else if (mode === 'dataset') {
-      updateApiConfig({
-        sourceType: 'dataset',
-        type: API_TYPES.LOWCODE_DS,
-        isDatasetBound: true,
-        datasetId: null
-      });
-    }
-  };
-
   const handleFilterChange = (event) => {
     setDatasetsFilter(event.target.value);
   };
 
-  const handleConnectionSelect = (connection) => {
-    setSelectedConnection(connection);
-    // 更新API配置，添加数据库连接信息
-    updateApiConfig({
-      connectionId: connection.id,
-      connectionConfig: {
-        type: connection.type,
-        host: connection.host,
-        port: connection.port,
-        database: connection.database
-      }
-    });
-  };
-  
+  // 数据库连接选择完成
   const handleConnectionNext = (connection) => {
-    // 确保我们有所选的连接
-    if (connection) {
-      setSelectedConnection(connection);
-      // 更新API配置，添加数据库连接信息
-      updateApiConfig({
-        connectionId: connection.id,
-        connectionConfig: {
-          type: connection.type,
-          host: connection.host,
-          port: connection.port,
-          database: connection.database
-        }
-      });
-    }
+    setSelectedConnection(connection);
     handleNext();
   };
 
@@ -345,16 +314,16 @@ function LowCode() {
         path: apiConfig.path,
         description: apiConfig.description,
         categories: apiConfig.categories,
-        sourceType: buildMode === 'database' ? 'database' : 'dataset',
-        type: buildMode === 'database' ? API_TYPES.LOWCODE_DB : API_TYPES.LOWCODE_DS,
-        isDatasetBound: buildMode === 'dataset',
-        datasetId: buildMode === 'dataset' ? apiConfig.sourceItem.id : null,
+        sourceType: apiConfig.sourceType,
+        type: apiConfig.type,
+        isDatasetBound: apiConfig.isDatasetBound,
+        datasetId: apiConfig.isDatasetBound ? apiConfig.sourceItem.id : null,
         connectionId: selectedConnection?.id,
-        selectedTable: buildMode === 'database' ? apiConfig.sourceItem : null,
+        selectedTable: apiConfig.sourceType === 'database' ? apiConfig.sourceItem : null,
       };
 
       // 如果启用自动生成参数
-      if (apiConfig.autoGenerateParams && buildMode === 'database') {
+      if (apiConfig.autoGenerateParams && apiConfig.sourceType === 'database') {
         const paramSuggestions = ParameterDemoService.generateParameterSuggestions(apiConfig.sourceItem);
         fullApiConfig.inputParameters = paramSuggestions.inputs || [];
         fullApiConfig.outputParameters = paramSuggestions.outputs || [];
@@ -388,232 +357,91 @@ function LowCode() {
     setShowBatchCreator(false);
   };
 
-  const filteredDatasets = datasetsFilter === 'all' 
-    ? datasets 
-    : datasets.filter(ds => ds.type === datasetsFilter);
+  const filteredDatasets = datasets.filter(dataset => {
+    if (datasetsFilter === 'all') return true;
+    return dataset.type === datasetsFilter;
+  });
 
   const getStepContent = (step) => {
-    // 如果没有选择构建方式，显示选择界面
-    if (buildMode === null) {
-      return (
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <Typography variant="h5" gutterBottom>
-              选择API构建方式
-            </Typography>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Card 
-              className={classes.choiceCard} 
-              elevation={3}
-              onClick={() => handleBuildModeSelect('dataset')}
-            >
-              <CardContent style={{ textAlign: 'center' }}>
-                <StorageIcon className={classes.cardIcon} />
-                <Typography variant="h5" gutterBottom>
-                  基于数据集构建
-                </Typography>
-                <Typography variant="body1" color="textSecondary">
-                  从已有数据集构建API，快速创建数据接口，支持内部平台数据集和外部接入数据集
-                </Typography>
-                <Box mt={2}>
-                  <Chip 
-                    icon={<LinkIcon />} 
-                    label="支持数据集绑定" 
-                    color="primary" 
-                    variant="outlined"
-                    className={classes.apiTypeChip}
-                  />
-                  <Chip 
-                    icon={<EditIcon />} 
-                    label="需要审核发布" 
-                    color="secondary" 
-                    variant="outlined"
-                    className={classes.apiTypeChip}
-                  />
-                </Box>
-              </CardContent>
-              <CardActions style={{ justifyContent: 'center', paddingBottom: 16 }}>
-                <Button variant="contained" color="primary">
-                  选择此方式
-                </Button>
-              </CardActions>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={6}>
-            <Card 
-              className={classes.choiceCard} 
-              elevation={3}
-              onClick={() => handleBuildModeSelect('database')}
-            >
-              <CardContent style={{ textAlign: 'center' }}>
-                <DatabaseIcon className={classes.cardIcon} />
-                <Typography variant="h5" gutterBottom>
-                  基于数据库构建
-                </Typography>
-                <Typography variant="body1" color="textSecondary">
-                  连接数据库构建API，支持复杂查询和自定义SQL，适合需要直接访问数据库的场景
-                </Typography>
-                <Box mt={2}>
-                  <Chip 
-                    icon={<DatabaseIcon />} 
-                    label="使用SQL查询" 
-                    color="primary" 
-                    variant="outlined"
-                    className={classes.apiTypeChip}
-                  />
-                  <Chip 
-                    icon={<EditIcon />} 
-                    label="需要审核发布" 
-                    color="secondary" 
-                    variant="outlined"
-                    className={classes.apiTypeChip}
-                  />
-                </Box>
-              </CardContent>
-              <CardActions style={{ justifyContent: 'center', paddingBottom: 16 }}>
-                <Button variant="contained" color="primary">
-                  选择此方式
-                </Button>
-              </CardActions>
-            </Card>
-          </Grid>
-          <Grid item xs={12} mt={4}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  API类型说明
-                </Typography>
-                <Typography variant="body2" paragraph>
-                  <strong>基于数据集构建的API：</strong> 此类API与数据集绑定，需要进行审核发布流程，订阅后需要绑定service account白名单才能访问。
-                </Typography>
-                <Typography variant="body2" paragraph>
-                  <strong>基于数据库构建的API：</strong> 此类API直接从数据库构建，需要进行审核发布流程，订阅后需要绑定service account白名单才能访问。
-                </Typography>
-                <Typography variant="body2">
-                  <strong>已上传API信息：</strong> 在"API目录"页面可以上传已有API的信息，此类API不需要审核和白名单绑定，仅用于展示API信息。
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      );
-    }
-
-    // 根据不同构建方式和步骤渲染内容
-    if (buildMode === 'database') {
+    // Dataset创建模式
+    if (datasetCreationMode) {
       switch (step) {
-        case 0:
+        case 0: // 数据库连接
           return <DatabaseConnection 
             onNext={handleConnectionNext}
-            onSelect={handleConnectionSelect}
           />;
-        case 1:
-          // 确保我们有数据库连接信息
-          if (!selectedConnection) {
-            setActiveStep(0);
-            setNotification({
-              open: true,
-              message: '请先选择或创建一个数据库连接',
-              severity: 'warning',
-            });
-            return null;
-          }
-          
-          return useJoinTables ? (
-            <JoinTablesBuilder
-              onConfigure={(tables, mainTable, joins) => {
-                updateApiConfig({
-                  tables,
-                  selectedTable: mainTable,
-                  joins,
-                });
-                handleNext();
-              }}
-              connection={selectedConnection}
-              toggleJoinMode={toggleJoinMode}
-            />
-          ) : (
-            <TableSelection
-              onSelect={(table) => {
-                updateApiConfig({
-                  selectedTable: table,
-                  tables: [table],
-                });
-                handleNext();
-              }}
-              onTablesLoad={(tables) => {
-                setAvailableTables(tables);
-              }}
-              toggleJoinMode={toggleJoinMode}
-              connection={selectedConnection}
-            />
-          );
-        case 2:
-          return <ParameterSelection 
-            onNext={handleNext} 
-            onBack={handleBack} 
-            apiConfig={apiConfig}
-            updateApiConfig={updateApiConfig} 
-          />;
-        case 3:
-          return <SqlEditor 
-            onNext={handleNext} 
-            onBack={handleBack} 
-            apiConfig={apiConfig}
-            updateApiConfig={updateApiConfig} 
-          />;
-        case 4:
-          return <ApiDetailsEditor 
-            onFinish={handleCreateApi}
-            onBack={handleBack} 
-            apiConfig={apiConfig}
-            updateApiConfig={updateApiConfig}
-            isDatasetBased={false}
+        case 1: // 选择数据表
+        case 2: // Dataset元数据
+        case 3: // 确认创建
+          return <DatasetCreationWizard
+            onNext={handleNext}
+            onBack={step === 1 ? handleExitDatasetCreation : handleBack}
+            onComplete={handleCompleteDatasetCreation}
+            connection={selectedConnection}
+            step={step}
+            selectedTable={selectedTable}
+            onTableSelect={handleTableSelect}
+            metadata={newDatasetMetadata}
+            onMetadataChange={handleMetadataChange}
             isSubmitting={isSubmitting}
           />;
         default:
-          return (
-            <div style={{ textAlign: 'center', padding: '2rem' }}>
-              <Typography variant="h6">未知步骤</Typography>
-            </div>
-          );
+          return null;
       }
-    } else if (buildMode === 'dataset') {
-      switch (step) {
-        case 0:
-          // 数据集选择步骤
-          return (
-            <div>
-              <Box className={classes.tabsRoot}>
-                <Tabs 
-                  value={tabValue} 
-                  onChange={handleTabChange} 
-                  indicatorColor="primary"
-                  textColor="primary"
+    }
+
+    // API构建模式 - 基于Dataset
+    switch (step) {
+      case 0: // 数据集选择
+        return (
+          <div>
+            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+              <Typography variant="h5" gutterBottom>
+                选择数据集
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                选择一个现有的数据集来构建API，或创建新的数据集
+              </Typography>
+            </div>
+
+            <Box className={classes.tabsRoot}>
+              <Tabs 
+                value={tabValue} 
+                onChange={handleTabChange} 
+                indicatorColor="primary"
+                textColor="primary"
+              >
+                <Tab label="全部数据集" />
+                <Tab label="我的数据集" />
+                <Tab label="外部数据集" />
+              </Tabs>
+            </Box>
+
+            <Box mb={3} display="flex" justifyContent="space-between" alignItems="center">
+              <FormControl variant="outlined" size="small" style={{ width: 200 }}>
+                <InputLabel id="dataset-filter-label">数据类型</InputLabel>
+                <Select
+                  labelId="dataset-filter-label"
+                  value={datasetsFilter}
+                  onChange={handleFilterChange}
+                  label="数据类型"
                 >
-                  <Tab label="全部数据集" />
-                  <Tab label="我的数据集" />
-                  <Tab label="外部数据集" />
-                </Tabs>
-              </Box>
+                  <MenuItem value="all">全部类型</MenuItem>
+                  <MenuItem value="structured">结构化数据</MenuItem>
+                  <MenuItem value="unstructured">非结构化数据</MenuItem>
+                  <MenuItem value="semi_structured">半结构化数据</MenuItem>
+                </Select>
+              </FormControl>
 
-              <Box mb={3} display="flex" justifyContent="space-between" alignItems="center">
-                <FormControl variant="outlined" size="small" style={{ width: 200 }}>
-                  <InputLabel id="dataset-filter-label">数据类型</InputLabel>
-                  <Select
-                    labelId="dataset-filter-label"
-                    value={datasetsFilter}
-                    onChange={handleFilterChange}
-                    label="数据类型"
-                  >
-                    <MenuItem value="all">全部类型</MenuItem>
-                    <MenuItem value="structured">结构化数据</MenuItem>
-                    <MenuItem value="unstructured">非结构化数据</MenuItem>
-                    <MenuItem value="semi_structured">半结构化数据</MenuItem>
-                  </Select>
-                </FormControl>
-
+              <Box>
+                <Button 
+                  variant="outlined"
+                  color="primary" 
+                  onClick={handleCreateDataset}
+                  style={{ marginRight: 16 }}
+                >
+                  创建新数据集
+                </Button>
                 <Button 
                   variant="contained" 
                   color="primary" 
@@ -623,169 +451,252 @@ function LowCode() {
                   下一步
                 </Button>
               </Box>
+            </Box>
 
-              <TabPanel value={tabValue} index={0}>
-                <Grid container spacing={3}>
-                  {filteredDatasets.length > 0 ? (
-                    filteredDatasets.map((dataset) => (
-                      <Grid item xs={12} sm={6} md={4} key={dataset.id}>
-                        <Card 
-                          className={`${classes.datasetCard} ${selectedDataset?.id === dataset.id ? classes.datasetCardSelected : ''}`}
-                          onClick={() => handleDatasetSelect(dataset)}
-                        >
-                          <CardMedia className={classes.datasetMedia}>
-                            {dataset.icon || <StorageIcon style={{ fontSize: 60 }} />}
-                          </CardMedia>
-                          <CardContent>
-                            <Typography variant="h6" gutterBottom>{dataset.name}</Typography>
-                            <Typography variant="body2" color="textSecondary">{dataset.description}</Typography>
-                            <Box mt={1} display="flex" flexWrap="wrap">
-                              <Chip 
-                                label={dataset.type || 'structured'} 
-                                size="small" 
-                                style={{ margin: '2px' }}
-                              />
-                              <Chip 
-                                label={dataset.source || 'internal'} 
-                                size="small" 
-                                style={{ margin: '2px' }}
-                              />
-                              <Chip 
-                                label={`${dataset.linkedApis?.length || 0} 个关联API`} 
-                                size="small" 
-                                style={{ margin: '2px' }}
-                                color={dataset.linkedApis?.length ? 'primary' : 'default'}
-                                variant="outlined"
-                              />
-                            </Box>
-                          </CardContent>
-                        </Card>
-                      </Grid>
-                    ))
-                  ) : (
-                    <Grid item xs={12}>
-                      <Paper style={{ padding: 16, textAlign: 'center' }}>
-                        <Typography variant="body1">
-                          暂无数据集，请先创建或导入数据集
-                        </Typography>
-                        <Button 
-                          variant="contained" 
-                          color="primary" 
-                          style={{ marginTop: 16 }}
-                          onClick={() => history.push('/datasets/new')}
-                        >
-                          创建数据集
-                        </Button>
-                      </Paper>
+            <TabPanel value={tabValue} index={0}>
+              <Grid container spacing={3}>
+                {filteredDatasets.length > 0 ? (
+                  filteredDatasets.map((dataset) => (
+                    <Grid item xs={12} sm={6} md={4} key={dataset.id}>
+                      <Card 
+                        className={`${classes.datasetCard} ${selectedDataset?.id === dataset.id ? classes.datasetCardSelected : ''}`}
+                        onClick={() => handleDatasetSelect(dataset)}
+                      >
+                        <CardMedia className={classes.datasetMedia}>
+                          {dataset.icon || <StorageIcon style={{ fontSize: 60 }} />}
+                        </CardMedia>
+                        <CardContent>
+                          <Typography variant="h6" gutterBottom>{dataset.name}</Typography>
+                          <Typography variant="body2" color="textSecondary">{dataset.description}</Typography>
+                          <Box mt={1} display="flex" flexWrap="wrap">
+                            <Chip 
+                              label={dataset.type || 'structured'} 
+                              size="small" 
+                              style={{ margin: '2px' }}
+                            />
+                            <Chip 
+                              label={dataset.source || 'internal'} 
+                              size="small" 
+                              style={{ margin: '2px' }}
+                            />
+                            <Chip 
+                              label={`${dataset.linkedApis?.length || 0} 个关联API`} 
+                              size="small" 
+                              style={{ margin: '2px' }}
+                              color={dataset.linkedApis?.length ? 'primary' : 'default'}
+                              variant="outlined"
+                            />
+                          </Box>
+                        </CardContent>
+                      </Card>
                     </Grid>
-                  )}
-                </Grid>
-              </TabPanel>
+                  ))
+                ) : (
+                  <Grid item xs={12}>
+                    <Paper style={{ padding: 16, textAlign: 'center' }}>
+                      <Typography variant="body1" gutterBottom>
+                        暂无数据集
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary" gutterBottom>
+                        您可以创建新的数据集来开始构建API
+                      </Typography>
+                      <Button 
+                        variant="contained" 
+                        color="primary" 
+                        style={{ marginTop: 16 }}
+                        onClick={handleCreateDataset}
+                      >
+                        创建数据集
+                      </Button>
+                    </Paper>
+                  </Grid>
+                )}
+              </Grid>
+            </TabPanel>
 
-              <TabPanel value={tabValue} index={1}>
-                <Typography variant="body1">我的数据集（暂无数据）</Typography>
-              </TabPanel>
+            <TabPanel value={tabValue} index={1}>
+              <Typography variant="body1">我的数据集（开发中）</Typography>
+            </TabPanel>
 
-              <TabPanel value={tabValue} index={2}>
-                <Typography variant="body1">外部数据集（暂无数据）</Typography>
-              </TabPanel>
-            </div>
-          );
-        case 1:
-          // 数据接口配置步骤 - 这里需要实现数据集接口配置的组件
-          return (
-            <div>
-              <Typography variant="h5" gutterBottom>数据接口配置</Typography>
-              <Typography variant="body1" paragraph>
-                为{selectedDataset?.name}配置接口属性
-              </Typography>
-              
-              <Box mt={3} display="flex" justifyContent="space-between">
-                <Button variant="outlined" onClick={handleBack}>
-                  返回
-                </Button>
-                <Button variant="contained" color="primary" onClick={handleNext}>
-                  下一步
-                </Button>
-              </Box>
-            </div>
-          );
-        case 2:
-          // 参数映射步骤 - 这里需要实现参数映射的组件
-          return (
-            <div>
-              <Typography variant="h5" gutterBottom>参数映射</Typography>
-              <Typography variant="body1" paragraph>
-                配置API输入参数与数据集字段的映射关系
-              </Typography>
-              
-              <Box mt={3} display="flex" justifyContent="space-between">
-                <Button variant="outlined" onClick={handleBack}>
-                  返回
-                </Button>
-                <Button variant="contained" color="primary" onClick={handleNext}>
-                  下一步
-                </Button>
-              </Box>
-            </div>
-          );
-        case 3:
-          // API详情步骤
-          return (
-            <ApiDetailsEditor 
-              onFinish={handleCreateApi}
-              onBack={handleBack} 
-              apiConfig={apiConfig}
-              updateApiConfig={updateApiConfig} 
-              isDatasetBased={true}
-              datasetInfo={selectedDataset}
-              isSubmitting={isSubmitting}
-            />
-          );
-        default:
-          return (
-            <div style={{ textAlign: 'center', padding: '2rem' }}>
-              <Typography variant="h6">未知步骤</Typography>
-            </div>
-          );
-      }
+            <TabPanel value={tabValue} index={2}>
+              <Typography variant="body1">外部数据集（开发中）</Typography>
+            </TabPanel>
+          </div>
+        );
+      case 1: // 参数配置
+        return <ParameterSelection 
+          onNext={handleNext} 
+          onBack={handleBack} 
+          apiConfig={apiConfig}
+          updateApiConfig={updateApiConfig}
+          selectedDataset={selectedDataset}
+        />;
+      case 2: // SQL编辑
+        return <SqlEditor 
+          onNext={handleNext} 
+          onBack={handleBack} 
+          apiConfig={apiConfig}
+          updateApiConfig={updateApiConfig}
+          selectedDataset={selectedDataset}
+        />;
+      case 3: // API详情
+        return <ApiDetailsEditor 
+          onFinish={handleCreateApi}
+          onBack={handleBack} 
+          apiConfig={apiConfig}
+          updateApiConfig={updateApiConfig}
+          isDatasetBased={true}
+          datasetInfo={selectedDataset}
+          isSubmitting={isSubmitting}
+        />;
+      default:
+        return (
+          <div style={{ textAlign: 'center', padding: '2rem' }}>
+            <Typography variant="h6">未知步骤</Typography>
+          </div>
+        );
     }
   };
 
   // 根据构建方式获取步骤
   const getSteps = () => {
-    if (buildMode === 'database') {
-      return databaseSteps;
-    } else if (buildMode === 'dataset') {
-      return datasetSteps;
+    if (datasetCreationMode) {
+      return datasetCreationSteps;
+    } else {
+      return apiBuilderSteps;
     }
-    return [];
+  };
+
+  // 进入Dataset创建模式
+  const handleCreateDataset = () => {
+    setDatasetCreationMode(true);
+    setActiveStep(0);
+  };
+
+  // 退出Dataset创建模式，回到Dataset选择
+  const handleExitDatasetCreation = () => {
+    setDatasetCreationMode(false);
+    setActiveStep(0);
+    setSelectedConnection(null);
+    setSelectedTable(null);
+    setNewDatasetMetadata({
+      name: '',
+      description: '',
+      category: 'project',
+      tags: [],
+      isPublic: false,
+    });
+  };
+
+  // 数据表选择完成
+  const handleTableSelect = (table) => {
+    setSelectedTable(table);
+    // 自动填充Dataset元数据
+    setNewDatasetMetadata(prev => ({
+      ...prev,
+      name: prev.name || `${table.name}_dataset`,
+      description: prev.description || `基于数据表 ${table.name} 创建的数据集`,
+      tags: [...new Set([...prev.tags, table.name, 'project', 'table'])],
+    }));
+    handleNext();
+  };
+
+  // Dataset元数据更新
+  const handleMetadataChange = (field, value) => {
+    setNewDatasetMetadata(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // 完成Dataset创建
+  const handleCompleteDatasetCreation = async () => {
+    try {
+      setIsSubmitting(true);
+      
+      // 创建Dataset
+      const datasetData = {
+        ...newDatasetMetadata,
+        sourceTable: selectedTable.name,
+        sourceConnection: selectedConnection.id,
+        tableSchema: selectedTable.columns || [],
+        uploadMode: 'table_binding',
+        fileCount: 1,
+        dataSize: selectedTable.size || '未知',
+      };
+
+      // 调用创建Dataset API
+      const createdDataset = await DatasetManagementService.uploadDataset(
+        new FormData(),
+        null
+      );
+
+      // 自动选择刚创建的Dataset，并退出创建模式
+      setSelectedDataset(createdDataset);
+      setDatasetCreationMode(false);
+      setActiveStep(0);
+      
+      updateApiConfig({
+        datasetId: createdDataset.id,
+        name: `${createdDataset.name}_api`,
+        description: `基于数据集 ${createdDataset.name} 的API`,
+        sourceType: 'dataset',
+        type: API_TYPES.LOWCODE_DS,
+        isDatasetBound: true,
+      });
+
+      setIsSubmitting(false);
+    } catch (error) {
+      console.error('创建Dataset失败:', error);
+      
+      // 使用模拟数据
+      const mockDataset = {
+        id: `dataset_${Date.now()}`,
+        name: newDatasetMetadata.name,
+        description: newDatasetMetadata.description,
+        category: 'project',
+        sourceTable: selectedTable.name,
+        createdAt: new Date().toISOString(),
+      };
+      
+      setSelectedDataset(mockDataset);
+      setDatasetCreationMode(false);
+      setActiveStep(0);
+      
+      updateApiConfig({
+        datasetId: mockDataset.id,
+        name: `${mockDataset.name}_api`,
+        description: `基于数据集 ${mockDataset.name} 的API`,
+        sourceType: 'dataset',
+        type: API_TYPES.LOWCODE_DS,
+        isDatasetBound: true,
+      });
+
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <Container maxWidth="lg">
-      {buildMode && (
-        <Paper className={classes.stepperContainer}>
-          <Typography variant="h4" align="center" gutterBottom>
-            API工坊 - {buildMode === 'database' ? '数据库' : '数据集'}API构建
-          </Typography>
-          <Stepper activeStep={activeStep} alternativeLabel>
-            {getSteps().map((step, index) => (
-              <Step key={step.key} onClick={() => handleStepClick(index)} style={{ cursor: 'pointer' }}>
-                <StepLabel>{step.label}</StepLabel>
-              </Step>
-            ))}
-          </Stepper>
-        </Paper>
-      )}
+      <Paper className={classes.stepperContainer}>
+        <Typography variant="h4" align="center" gutterBottom>
+          API工坊 - {datasetCreationMode ? 'Dataset创建' : '基于数据集构建API'}
+        </Typography>
+        <Stepper activeStep={activeStep} alternativeLabel>
+          {getSteps().map((step, index) => (
+            <Step key={step.key} onClick={() => handleStepClick(index)} style={{ cursor: 'pointer' }}>
+              <StepLabel>{step.label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
+      </Paper>
 
       <div className={classes.contentContainer}>
         {getStepContent(activeStep)}
       </div>
 
-      {/* 批量创建API的浮动按钮 */}
-      {(buildMode === 'database' && selectedConnection && availableTables.length > 0) ||
-       (buildMode === 'dataset' && datasets.length > 0) ? (
+      {/* 批量创建API的浮动按钮 - 只在API构建模式显示 */}
+      {!datasetCreationMode && datasets.length > 0 && (
         <Tooltip title="批量创建API" placement="left">
           <Fab
             color="secondary"
@@ -801,7 +712,7 @@ function LowCode() {
             <BatchIcon />
           </Fab>
         </Tooltip>
-      ) : null}
+      )}
 
       {/* 批量创建API对话框 */}
       <ApiBatchCreator
@@ -810,10 +721,10 @@ function LowCode() {
         onBatchCreate={handleBatchCreate}
         availableTables={availableTables}
         availableDatasets={datasets}
-        sourceType={buildMode}
+        sourceType="dataset"
       />
     </Container>
   );
 }
 
-export default LowCode; 
+export default LowCode;

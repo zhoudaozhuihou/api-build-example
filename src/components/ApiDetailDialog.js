@@ -54,6 +54,8 @@ import {
 import MUIRichTextEditor from 'mui-rte';
 import { convertFromRaw, convertToRaw, EditorState } from 'draft-js';
 import ApiLineage from './ApiLineage';
+import EditableParameterTable from './EditableParameterTable';
+import JsonTableDisplay from './JsonTableDisplay';
 
 const defaultTheme = createTheme({
   overrides: {
@@ -623,8 +625,8 @@ const ApiDetailDialog = ({ open, onClose, api }) => {
     // Deep clone the current data
     const newData = JSON.parse(JSON.stringify(editableData));
     
-    // If no path, update the whole object
-    if (!path) {
+    // If no path, update the whole object (for JsonTableDisplay)
+    if (!path || path === '') {
       newData[field] = value;
     } else {
       // Get the object to update using path
@@ -656,6 +658,11 @@ const ApiDetailDialog = ({ open, onClose, api }) => {
     }
     
     setEditableData(newData);
+  };
+
+  // Handle parameters change
+  const handleParametersChange = (updatedParameters) => {
+    handleDataFieldChange('parameters', null, updatedParameters);
   };
   
   // Handle saving all changes
@@ -933,23 +940,25 @@ const ApiDetailDialog = ({ open, onClose, api }) => {
                     <Typography variant="h6" gutterBottom>请求信息</Typography>
                     
                     <Typography variant="subtitle1" gutterBottom>请求头</Typography>
-                    <JsonDisplay 
+                    <JsonTableDisplay 
                       data={editableData.requestHeaders} 
                       title="Headers" 
-                      onCopy={() => handleCopy(formatJson(editableData.requestHeaders), 'reqHeaders')}
+                      onCopy={(jsonString) => handleCopy(jsonString, 'reqHeaders')}
                       isCopied={copiedField === 'reqHeaders'}
-                      onEdit={(path, value) => handleDataFieldChange('requestHeaders', path, value)}
+                      onDataChange={(newData) => handleDataFieldChange('requestHeaders', '', newData)}
                       isEditable={editMode}
+                      defaultView="table"
                     />
                     
                     <Typography variant="subtitle1" gutterBottom>请求体</Typography>
-                    <JsonDisplay 
+                    <JsonTableDisplay 
                       data={editableData.requestBody} 
                       title="Body" 
-                      onCopy={() => handleCopy(formatJson(editableData.requestBody), 'reqBody')}
+                      onCopy={(jsonString) => handleCopy(jsonString, 'reqBody')}
                       isCopied={copiedField === 'reqBody'}
-                      onEdit={(path, value) => handleDataFieldChange('requestBody', path, value)}
+                      onDataChange={(newData) => handleDataFieldChange('requestBody', '', newData)}
                       isEditable={editMode}
+                      defaultView="table"
                     />
                     
                     <Box mt={3}>
@@ -992,23 +1001,25 @@ const ApiDetailDialog = ({ open, onClose, api }) => {
                     <Typography variant="h6" gutterBottom>响应信息</Typography>
                     
                     <Typography variant="subtitle1" gutterBottom>响应头</Typography>
-                    <JsonDisplay 
+                    <JsonTableDisplay 
                       data={editableData.responseHeaders} 
                       title="Headers" 
-                      onCopy={() => handleCopy(formatJson(editableData.responseHeaders), 'resHeaders')}
+                      onCopy={(jsonString) => handleCopy(jsonString, 'resHeaders')}
                       isCopied={copiedField === 'resHeaders'}
-                      onEdit={(path, value) => handleDataFieldChange('responseHeaders', path, value)}
+                      onDataChange={(newData) => handleDataFieldChange('responseHeaders', '', newData)}
                       isEditable={editMode}
+                      defaultView="table"
                     />
                     
                     <Typography variant="subtitle1" gutterBottom>响应体</Typography>
-                    <JsonDisplay 
+                    <JsonTableDisplay 
                       data={editableData.responseBody} 
                       title="Body" 
-                      onCopy={() => handleCopy(formatJson(editableData.responseBody), 'resBody')}
+                      onCopy={(jsonString) => handleCopy(jsonString, 'resBody')}
                       isCopied={copiedField === 'resBody'}
-                      onEdit={(path, value) => handleDataFieldChange('responseBody', path, value)}
+                      onDataChange={(newData) => handleDataFieldChange('responseBody', '', newData)}
                       isEditable={editMode}
+                      defaultView="table"
                     />
                     
                     <Box mt={3}>
@@ -1058,180 +1069,13 @@ const ApiDetailDialog = ({ open, onClose, api }) => {
 
               {/* Parameters Tab */}
               <TabPanel value={tabValue} index={2}>
-                <Typography variant="h6" gutterBottom>API 参数</Typography>
-                
-                <Paper variant="outlined">
-                  <TableContainer>
-                    <Table>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell width="20%">参数名</TableCell>
-                          <TableCell width="15%">类型</TableCell>
-                          <TableCell width="10%">必填</TableCell>
-                          <TableCell width="55%">描述</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {editableData.parameters.map((param, index) => (
-                          <React.Fragment key={index}>
-                            <TableRow>
-                              <TableCell style={{ fontWeight: 500 }}>
-                                {param.name}
-                                {param.children && (
-                                  <IconButton size="small" onClick={() => {
-                                    const newParams = [...editableData.parameters];
-                                    newParams[index].isExpanded = !newParams[index].isExpanded;
-                                    handleDataFieldChange('parameters', null, newParams);
-                                  }}>
-                                    {param.isExpanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-                                  </IconButton>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <Chip 
-                                  label={param.type} 
-                                  size="small" 
-                                  variant="outlined"
-                                  style={{ 
-                                    backgroundColor: param.type === 'string' ? '#e3f2fd' : 
-                                                    param.type === 'integer' ? '#f1f8e9' : 
-                                                    param.type === 'boolean' ? '#fff3e0' : 
-                                                    param.type === 'object' ? '#ede7f6' :
-                                                    param.type === 'array' ? '#e8f5e9' : '#fafafa'
-                                  }}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                {param.required ? (
-                                  <Chip 
-                                    label="必填" 
-                                    size="small" 
-                                    color="secondary"
-                                    style={{ fontSize: '0.75rem' }}
-                                  />
-                                ) : (
-                                  <Chip 
-                                    label="可选" 
-                                    size="small" 
-                                    variant="outlined"
-                                    style={{ fontSize: '0.75rem' }}
-                                  />
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {param.description}
-                                {param.enum && (
-                                  <Box mt={1}>
-                                    <Typography variant="caption" style={{ display: 'block' }}>可选值:</Typography>
-                                    <Box display="flex" flexWrap="wrap" mt={0.5}>
-                                      {param.enum.map((value, i) => (
-                                        <Chip 
-                                          key={i} 
-                                          label={value} 
-                                          size="small" 
-                                          style={{ margin: '0 4px 4px 0', fontSize: '0.7rem' }} 
-                                        />
-                                      ))}
-                                    </Box>
-                                  </Box>
-                                )}
-                                {param.example && (
-                                  <Box mt={1}>
-                                    <Typography variant="caption" style={{ display: 'block' }}>示例:</Typography>
-                                    <Paper variant="outlined" style={{ padding: 8, backgroundColor: '#fafafa', marginTop: 4 }}>
-                                      <pre style={{ margin: 0, fontSize: '0.7rem', whiteSpace: 'pre-wrap' }}>
-                                        {typeof param.example === 'object' 
-                                          ? JSON.stringify(param.example, null, 2)
-                                          : param.example
-                                        }
-                                      </pre>
-                                    </Paper>
-                                  </Box>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                            
-                            {/* Nested parameters */}
-                            {param.children && param.isExpanded && (
-                              <TableRow>
-                                <TableCell colSpan={4} style={{ padding: 0, backgroundColor: '#fafafa' }}>
-                                  <Box pl={4} pr={2} py={2}>
-                                    <Table size="small">
-                                      <TableHead>
-                                        <TableRow>
-                                          <TableCell width="20%">子参数</TableCell>
-                                          <TableCell width="15%">类型</TableCell>
-                                          <TableCell width="10%">必填</TableCell>
-                                          <TableCell width="55%">描述</TableCell>
-                                        </TableRow>
-                                      </TableHead>
-                                      <TableBody>
-                                        {param.children.map((child, childIdx) => (
-                                          <TableRow key={childIdx}>
-                                            <TableCell>{child.name}</TableCell>
-                                            <TableCell>
-                                              <Chip 
-                                                label={child.type} 
-                                                size="small" 
-                                                variant="outlined"
-                                                style={{ 
-                                                  backgroundColor: child.type === 'string' ? '#e3f2fd' : 
-                                                                  child.type === 'integer' ? '#f1f8e9' : 
-                                                                  child.type === 'boolean' ? '#fff3e0' : 
-                                                                  child.type === 'object' ? '#ede7f6' :
-                                                                  child.type === 'array' ? '#e8f5e9' : '#fafafa'
-                                                }}
-                                              />
-                                            </TableCell>
-                                            <TableCell>
-                                              {child.required ? (
-                                                <Chip 
-                                                  label="必填" 
-                                                  size="small" 
-                                                  color="secondary"
-                                                  style={{ fontSize: '0.75rem' }}
-                                                />
-                                              ) : (
-                                                <Chip 
-                                                  label="可选" 
-                                                  size="small" 
-                                                  variant="outlined"
-                                                  style={{ fontSize: '0.75rem' }}
-                                                />
-                                              )}
-                                            </TableCell>
-                                            <TableCell>
-                                              {child.description}
-                                              {child.enum && (
-                                                <Box mt={1}>
-                                                  <Typography variant="caption" style={{ display: 'block' }}>可选值:</Typography>
-                                                  <Box display="flex" flexWrap="wrap" mt={0.5}>
-                                                    {child.enum.map((value, i) => (
-                                                      <Chip 
-                                                        key={i} 
-                                                        label={value} 
-                                                        size="small" 
-                                                        style={{ margin: '0 4px 4px 0', fontSize: '0.7rem' }} 
-                                                      />
-                                                    ))}
-                                                  </Box>
-                                                </Box>
-                                              )}
-                                            </TableCell>
-                                          </TableRow>
-                                        ))}
-                                      </TableBody>
-                                    </Table>
-                                  </Box>
-                                </TableCell>
-                              </TableRow>
-                            )}
-                          </React.Fragment>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </Paper>
+                <EditableParameterTable
+                  parameters={editableData.parameters || []}
+                  onParametersChange={handleParametersChange}
+                  title="API 参数管理"
+                  subtitle="点击任意单元格进行编辑。修改的内容会高亮显示直到保存。"
+                  editable={editMode}
+                />
                 
                 <Box mt={4}>
                   <Typography variant="h6" gutterBottom>嵌套参数示例 (JSON)</Typography>

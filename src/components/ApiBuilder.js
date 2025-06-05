@@ -120,7 +120,7 @@ const mockTables = [
 const httpMethods = ['GET', 'POST', 'PUT', 'DELETE'];
 const parameterTypes = ['string', 'number', 'boolean', 'date'];
 
-function ApiBuilder({ onNext, onBack }) {
+function ApiBuilder({ onNext, onBack, tableDatasetBinding }) {
   const classes = useStyles();
   const [apiConfig, setApiConfig] = useState({
     name: '',
@@ -131,6 +131,9 @@ function ApiBuilder({ onNext, onBack }) {
     parameters: [],
     categories: [],
     upstreamSystems: [],
+    selectedTable: null,
+    boundDataset: null,
+    sourceConnection: null,
   });
   const [notification, setNotification] = useState({
     open: false,
@@ -142,8 +145,38 @@ function ApiBuilder({ onNext, onBack }) {
   const [availableColumns, setAvailableColumns] = useState([]);
   const [upstreamInput, setUpstreamInput] = useState({ name: '', description: '' });
 
-  // 初始化时检查是否有JOIN模式的数据
+  // 初始化时检查是否有JOIN模式的数据或Table-Dataset绑定数据
   useEffect(() => {
+    // 优先检查新的Table-Dataset绑定数据
+    if (tableDatasetBinding) {
+      console.log('使用Table-Dataset绑定数据:', tableDatasetBinding);
+      setApiConfig(prev => ({
+        ...prev,
+        selectedTable: tableDatasetBinding.table,
+        boundDataset: tableDatasetBinding.dataset,
+        sourceConnection: tableDatasetBinding.connection,
+        name: `${tableDatasetBinding.table.name}_api`,
+        description: `基于数据集 ${tableDatasetBinding.dataset.name} 的API`,
+      }));
+
+      // 根据表结构生成可用列
+      if (tableDatasetBinding.table.columns) {
+        const tableColumns = tableDatasetBinding.table.columns.map(col => ({
+          id: `${tableDatasetBinding.table.id}_${col.id}`,
+          name: `${tableDatasetBinding.table.name}.${col.name}`,
+          tableId: tableDatasetBinding.table.id,
+          columnId: col.id,
+          tableName: tableDatasetBinding.table.name,
+          columnName: col.name,
+          type: col.type,
+          description: col.description
+        }));
+        setAvailableColumns(tableColumns);
+      }
+      return;
+    }
+
+    // 检查JOIN模式数据（兼容旧流程）
     const storedJoinData = localStorage.getItem('joinTablesData');
     if (storedJoinData) {
       try {
@@ -173,7 +206,7 @@ function ApiBuilder({ onNext, onBack }) {
         console.error('解析JOIN数据失败', e);
       }
     } else {
-      // 单表模式
+      // 单表模式（兼容旧流程）
       const selectedTable = JSON.parse(localStorage.getItem('selectedTable'));
       if (selectedTable) {
         const tableData = mockTables.find(t => t.id === selectedTable.id);
@@ -192,7 +225,7 @@ function ApiBuilder({ onNext, onBack }) {
         }
       }
     }
-  }, []);
+  }, [tableDatasetBinding]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

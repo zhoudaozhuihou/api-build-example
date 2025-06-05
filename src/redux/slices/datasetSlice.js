@@ -41,7 +41,72 @@ const datasetsAdapter = createEntityAdapter({
 });
 
 // 初始状态
-const initialState = datasetsAdapter.getInitialState({
+const initialState = {
+  datasets: [
+    {
+      id: 'ds_001',
+      name: '用户数据集',
+      description: '包含用户基本信息和行为数据的数据集',
+      type: 'structured',
+      source: 'internal',
+      category: 'project',
+      tags: ['user', 'behavior', 'profile'],
+      isPublic: true,
+      createdAt: '2024-03-15T08:00:00Z',
+      updatedAt: '2024-03-15T08:00:00Z',
+      sourceTable: 'users',
+      sourceConnection: 'conn_001',
+      tableSchema: [
+        { name: 'id', type: 'INTEGER', description: '用户ID' },
+        { name: 'username', type: 'VARCHAR', description: '用户名' },
+        { name: 'email', type: 'VARCHAR', description: '邮箱' },
+        { name: 'created_at', type: 'TIMESTAMP', description: '创建时间' }
+      ],
+      linkedApis: ['api_001', 'api_002']
+    },
+    {
+      id: 'ds_002',
+      name: '订单数据集',
+      description: '包含订单信息和交易数据的数据集',
+      type: 'structured',
+      source: 'internal',
+      category: 'project',
+      tags: ['order', 'transaction', 'business'],
+      isPublic: false,
+      createdAt: '2024-03-14T10:00:00Z',
+      updatedAt: '2024-03-14T10:00:00Z',
+      sourceTable: 'orders',
+      sourceConnection: 'conn_001',
+      tableSchema: [
+        { name: 'order_id', type: 'INTEGER', description: '订单ID' },
+        { name: 'user_id', type: 'INTEGER', description: '用户ID' },
+        { name: 'amount', type: 'DECIMAL', description: '订单金额' },
+        { name: 'status', type: 'VARCHAR', description: '订单状态' }
+      ],
+      linkedApis: ['api_003']
+    },
+    {
+      id: 'ds_003',
+      name: '产品数据集',
+      description: '包含产品信息和库存数据的数据集',
+      type: 'structured',
+      source: 'internal',
+      category: 'project',
+      tags: ['product', 'inventory', 'catalog'],
+      isPublic: true,
+      createdAt: '2024-03-13T15:00:00Z',
+      updatedAt: '2024-03-13T15:00:00Z',
+      sourceTable: 'products',
+      sourceConnection: 'conn_002',
+      tableSchema: [
+        { name: 'product_id', type: 'INTEGER', description: '产品ID' },
+        { name: 'name', type: 'VARCHAR', description: '产品名称' },
+        { name: 'price', type: 'DECIMAL', description: '产品价格' },
+        { name: 'stock', type: 'INTEGER', description: '库存数量' }
+      ],
+      linkedApis: []
+    }
+  ],
   status: 'idle',
   error: null,
   selectedDataset: null,
@@ -53,7 +118,10 @@ const initialState = datasetsAdapter.getInitialState({
     source: null,
     searchTerm: ''
   }
-});
+};
+
+// 导出 initialState
+export { initialState };
 
 // 获取所有数据集
 export const fetchDatasets = createAsyncThunk(
@@ -260,7 +328,7 @@ export const {
 // 自定义选择器
 export const selectFilteredDatasets = createSelector(
   [
-    selectAllDatasets,
+    (state) => state.datasets.datasets || [], // 直接从 state 获取 datasets 数组
     (state) => state.datasets.filters
   ],
   (datasets, filters) => {

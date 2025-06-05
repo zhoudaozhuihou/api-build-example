@@ -25,7 +25,56 @@ const apisAdapter = createEntityAdapter({
 });
 
 // 初始状态
-const initialState = apisAdapter.getInitialState({
+export const initialState = {
+  apis: [
+    {
+      id: 'api_001',
+      name: '用户管理API',
+      description: '用户相关的API集合',
+      version: '1.0.0',
+      basePath: '/api/v1/users',
+      endpoints: [
+        {
+          id: 'endpoint_001',
+          name: '获取用户列表',
+          path: '/',
+          method: 'GET',
+          description: '获取所有用户列表',
+          parameters: [
+            {
+              name: 'page',
+              in: 'query',
+              description: '页码',
+              required: false,
+              type: 'integer'
+            },
+            {
+              name: 'size',
+              in: 'query',
+              description: '每页数量',
+              required: false,
+              type: 'integer'
+            }
+          ],
+          responses: {
+            '200': {
+              description: '成功获取用户列表',
+              schema: {
+                type: 'array',
+                items: {
+                  $ref: '#/definitions/User'
+                }
+              }
+            }
+          }
+        }
+      ],
+      dataset: 'dataset_001',
+      status: 'active',
+      createdAt: '2024-03-15T08:00:00Z',
+      updatedAt: '2024-03-15T08:00:00Z'
+    }
+  ],
   status: 'idle',
   error: null,
   categories: [],
@@ -35,7 +84,7 @@ const initialState = apisAdapter.getInitialState({
     status: null,
     searchTerm: ''
   }
-});
+};
 
 // 获取所有API
 export const fetchApis = createAsyncThunk(

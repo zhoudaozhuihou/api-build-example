@@ -1924,7 +1924,7 @@ const ApiCatalog = () => {
   useEffect(() => {
     let results = [...mockApis];
     
-    // 搜索筛
+    // 搜索筛选
     if (searchQuery.trim() !== '') {
       const query = searchQuery.toLowerCase();
       results = results.filter(api => 
@@ -1932,7 +1932,18 @@ const ApiCatalog = () => {
         api.description.toLowerCase().includes(query) ||
         api.category.toLowerCase().includes(query) ||
         api.subCategory.toLowerCase().includes(query) ||
-        api.endpoints.some(endpoint => endpoint.toLowerCase().includes(query))
+        (api.endpoints && api.endpoints.some(endpoint => {
+          if (typeof endpoint === 'string') {
+            return endpoint.toLowerCase().includes(query);
+          } else if (endpoint && typeof endpoint === 'object') {
+            return (
+              (endpoint.path && endpoint.path.toLowerCase().includes(query)) ||
+              (endpoint.method && endpoint.method.toLowerCase().includes(query)) ||
+              (endpoint.name && endpoint.name.toLowerCase().includes(query))
+            );
+          }
+          return false;
+        }))
       );
     }
     
@@ -2455,14 +2466,16 @@ const ApiCatalog = () => {
                 {api.endpoints.slice(0, 3).map((endpoint, idx) => (
                   <Chip
                     key={idx}
-                    label={endpoint}
+                    label={typeof endpoint === 'string' ? endpoint : `${endpoint.method} ${endpoint.path}`}
                     size="small"
                     variant="outlined"
                     className={classes.endpointChip}
                   />
                 ))}
                 {api.endpoints.length > 3 && (
-                  <Tooltip title={api.endpoints.slice(3).join(', ')}>
+                  <Tooltip title={api.endpoints.slice(3).map(endpoint => 
+                    typeof endpoint === 'string' ? endpoint : `${endpoint.method} ${endpoint.path}`
+                  ).join(', ')}>
                     <Chip
                       label={`+${api.endpoints.length - 3}个`}
                       size="small"

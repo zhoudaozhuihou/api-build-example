@@ -151,6 +151,24 @@ function Navigation() {
               <span className={classes.buttonText}>分类选择器</span>
             </Button>
           </Link>
+          <Link to="/json-table-demo" className={classes.link}>
+            <Button 
+              color="inherit" 
+              className={isActive('/json-table-demo') ? classes.activeButton : ''}
+              startIcon={<CategoryIcon />}
+            >
+              <span className={classes.buttonText}>JSON表格</span>
+            </Button>
+          </Link>
+          <Link to="/json-component-demo" className={classes.link}>
+            <Button 
+              color="inherit" 
+              className={isActive('/json-component-demo') ? classes.activeButton : ''}
+              startIcon={<CategoryIcon />}
+            >
+              <span className={classes.buttonText}>通用组件演示</span>
+            </Button>
+          </Link>
         </Toolbar>
       </AppBar>
     </div>
