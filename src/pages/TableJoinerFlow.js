@@ -23,11 +23,30 @@ import {
   Chip,
   Menu,
   MenuItem,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  TextField,
+  Select,
+  FormControl,
+  InputLabel,
+  FormControlLabel,
+  Checkbox,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@material-ui/core';
 import {
   TableChart,
   Code as CodeIcon,
   Refresh as RefreshIcon,
+  ExpandMore as ExpandMoreIcon,
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  Settings as SettingsIcon,
+  Edit as EditIcon,
 } from '@material-ui/icons';
 
 const useStyles = makeStyles((theme) => ({
@@ -199,6 +218,60 @@ function CustomEdge({ id, sourceX, sourceY, targetX, targetY, label, style = {},
 }
 
 function TableNode({ data }) {
+  const [selectedFields, setSelectedFields] = React.useState(
+    data.fields.reduce((acc, field) => ({ 
+      ...acc, 
+      [field.name]: { selected: true, alias: '', aggregateFunc: '' }
+    }), {})
+  );
+  const [configDialog, setConfigDialog] = React.useState({ open: false, fieldName: '', fieldConfig: {} });
+
+  // 通知父组件字段选择变化
+  const handleFieldToggle = (fieldName) => {
+    const newSelection = { 
+      ...selectedFields, 
+      [fieldName]: { 
+        ...selectedFields[fieldName], 
+        selected: !selectedFields[fieldName].selected 
+      }
+    };
+    setSelectedFields(newSelection);
+    
+    // 触发事件通知父组件
+    window.dispatchEvent(new CustomEvent('updateFieldSelection', {
+      detail: { nodeId: data.nodeId, fieldName, selected: !selectedFields[fieldName].selected }
+    }));
+  };
+
+  // 打开字段配置对话框
+  const openFieldConfig = (fieldName) => {
+    setConfigDialog({
+      open: true,
+      fieldName,
+      fieldConfig: { ...selectedFields[fieldName] }
+    });
+  };
+
+  // 保存字段配置
+  const saveFieldConfig = () => {
+    const newSelection = {
+      ...selectedFields,
+      [configDialog.fieldName]: configDialog.fieldConfig
+    };
+    setSelectedFields(newSelection);
+    
+    // 触发事件通知父组件
+    window.dispatchEvent(new CustomEvent('updateFieldConfig', {
+      detail: { 
+        nodeId: data.nodeId, 
+        fieldName: configDialog.fieldName, 
+        config: configDialog.fieldConfig 
+      }
+    }));
+    
+    setConfigDialog({ open: false, fieldName: '', fieldConfig: {} });
+  };
+
   return (
     <div style={{ border: '2px solid #e53935', borderRadius: 8, background: '#fff', minWidth: 250, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
       <div style={{ background: '#e53935', color: '#fff', padding: '12px 16px', borderRadius: '6px 6px 0 0', fontWeight: 'bold', fontSize: '16px' }}>
@@ -213,14 +286,23 @@ function TableNode({ data }) {
               marginBottom: 8, 
               padding: '8px 12px', 
               borderRadius: 6, 
-              background: field.isPrimary ? '#e3f2fd' : '#f5f5f5',
+              background: selectedFields[field.name]?.selected 
+                ? (field.isPrimary ? '#e3f2fd' : '#f5f5f5')
+                : '#fafafa',
               border: `1px solid ${field.isPrimary ? '#2196f3' : '#e0e0e0'}`,
               display: 'flex',
               justifyContent: 'space-between',
-              alignItems: 'center'
+              alignItems: 'center',
+              opacity: selectedFields[field.name]?.selected ? 1 : 0.6
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+              <input
+                type="checkbox"
+                checked={selectedFields[field.name]?.selected || false}
+                onChange={() => handleFieldToggle(field.name)}
+                style={{ marginRight: 4 }}
+              />
               <span style={{ fontWeight: field.isPrimary ? 'bold' : 'normal' }}>
                 {field.name}
               </span>
@@ -236,6 +318,36 @@ function TableNode({ data }) {
                   PK
                 </span>
               )}
+              {(selectedFields[field.name]?.alias || selectedFields[field.name]?.aggregateFunc) && (
+                <span style={{ 
+                  background: '#ff9800', 
+                  color: 'white', 
+                  padding: '2px 6px', 
+                  borderRadius: 4, 
+                  fontSize: '10px',
+                  fontWeight: 'bold'
+                }}>
+                  配置
+                </span>
+              )}
+            </div>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <button
+                onClick={() => openFieldConfig(field.name)}
+                style={{
+                  background: 'none',
+                  border: '1px solid #ccc',
+                  borderRadius: 4,
+                  padding: '2px 4px',
+                  cursor: 'pointer',
+                  fontSize: '10px',
+                  color: '#666'
+                }}
+                title="配置字段"
+              >
+                ⚙️
+              </button>
             </div>
             <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace' }}>
               {field.type || 'VARCHAR'}
@@ -271,6 +383,70 @@ function TableNode({ data }) {
           </div>
         ))}
       </div>
+      
+      {/* 字段配置对话框 */}
+      <Dialog 
+        open={configDialog.open} 
+        onClose={() => setConfigDialog({ open: false, fieldName: '', fieldConfig: {} })}
+        maxWidth="sm" 
+        fullWidth
+      >
+        <DialogTitle>配置字段: {configDialog.fieldName}</DialogTitle>
+        <DialogContent>
+          <Box display="flex" flexDirection="column" gap={2} mt={1}>
+            <FormControl fullWidth>
+              <InputLabel>聚合函数</InputLabel>
+              <Select
+                value={configDialog.fieldConfig.aggregateFunc || ''}
+                onChange={(e) => setConfigDialog(prev => ({
+                  ...prev,
+                  fieldConfig: { ...prev.fieldConfig, aggregateFunc: e.target.value }
+                }))}
+              >
+                <MenuItem value="">无</MenuItem>
+                <MenuItem value="COUNT">COUNT - 计数</MenuItem>
+                <MenuItem value="SUM">SUM - 求和</MenuItem>
+                <MenuItem value="AVG">AVG - 平均值</MenuItem>
+                <MenuItem value="MAX">MAX - 最大值</MenuItem>
+                <MenuItem value="MIN">MIN - 最小值</MenuItem>
+                <MenuItem value="COUNT(DISTINCT">COUNT(DISTINCT) - 去重计数</MenuItem>
+              </Select>
+            </FormControl>
+            
+            <TextField
+              label="字段别名"
+              value={configDialog.fieldConfig.alias || ''}
+              onChange={(e) => setConfigDialog(prev => ({
+                ...prev,
+                fieldConfig: { ...prev.fieldConfig, alias: e.target.value }
+              }))}
+              placeholder="为字段设置别名"
+              fullWidth
+            />
+            
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={configDialog.fieldConfig.selected || false}
+                  onChange={(e) => setConfigDialog(prev => ({
+                    ...prev,
+                    fieldConfig: { ...prev.fieldConfig, selected: e.target.checked }
+                  }))}
+                />
+              }
+              label="选择此字段"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfigDialog({ open: false, fieldName: '', fieldConfig: {} })}>
+            取消
+          </Button>
+          <Button onClick={saveFieldConfig} color="primary" variant="contained">
+            保存
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }
@@ -407,6 +583,18 @@ export default function TableJoinerFlow() {
   const classes = useStyles();
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
+  
+  // 查询构建器状态
+  const [querySettings, setQuerySettings] = useState({
+    selectedFields: {},  // { nodeId: { fieldName: { selected: boolean, alias: string, aggregateFunc: string } } }
+    whereConditions: [], // { field: 'table.field', operator: '=', value: 'value' }
+    groupByFields: [],   // ['table.field']
+    havingConditions: [], // { field: 'table.field', operator: '=', value: 'value' }
+    orderByFields: [],   // { field: 'table.field', direction: 'ASC|DESC' }
+    distinct: false,
+    limit: null,
+    offset: null
+  });
 
   const onNodesChange = useCallback(
     (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -441,9 +629,46 @@ export default function TableJoinerFlow() {
       );
     };
 
+    const handleFieldSelection = (event) => {
+      const { nodeId, fieldName, selected } = event.detail;
+      setQuerySettings(prev => ({
+        ...prev,
+        selectedFields: {
+          ...prev.selectedFields,
+          [nodeId]: {
+            ...prev.selectedFields[nodeId],
+            [fieldName]: {
+              selected: selected,
+              alias: prev.selectedFields[nodeId]?.[fieldName]?.alias || '',
+              aggregateFunc: prev.selectedFields[nodeId]?.[fieldName]?.aggregateFunc || ''
+            }
+          }
+        }
+      }));
+    };
+
+    const handleFieldConfig = (event) => {
+      const { nodeId, fieldName, config } = event.detail;
+      setQuerySettings(prev => ({
+        ...prev,
+        selectedFields: {
+          ...prev.selectedFields,
+          [nodeId]: {
+            ...prev.selectedFields[nodeId],
+            [fieldName]: config
+          }
+        }
+      }));
+    };
+
     window.addEventListener('updateEdgeLabel', handleUpdateEdgeLabel);
+    window.addEventListener('updateFieldSelection', handleFieldSelection);
+    window.addEventListener('updateFieldConfig', handleFieldConfig);
+    
     return () => {
       window.removeEventListener('updateEdgeLabel', handleUpdateEdgeLabel);
+      window.removeEventListener('updateFieldSelection', handleFieldSelection);
+      window.removeEventListener('updateFieldConfig', handleFieldConfig);
     };
   }, []);
 
@@ -459,17 +684,31 @@ export default function TableJoinerFlow() {
         y: e.clientY - canvasRect.top - 100
       };
 
+      const nodeId = `${tableData.id}_${Date.now()}`;
       const newNode = {
-        id: `${tableData.id}_${Date.now()}`,
+        id: nodeId,
         type: 'table',
         position,
         data: {
           label: tableData.name,
-          fields: tableData.fields
+          fields: tableData.fields,
+          nodeId: nodeId  // 确保节点数据包含ID
         }
       };
 
       setNodes(prev => [...prev, newNode]);
+      
+      // 初始化字段选择状态
+      setQuerySettings(prev => ({
+        ...prev,
+        selectedFields: {
+          ...prev.selectedFields,
+          [nodeId]: tableData.fields.reduce((acc, field) => ({ 
+            ...acc, 
+            [field.name]: { selected: true, alias: '', aggregateFunc: '' }
+          }), {})
+        }
+      }));
     }
   }, []);
 
@@ -480,45 +719,133 @@ export default function TableJoinerFlow() {
   };
 
   const generateSQL = () => {
-    if (edges.length === 0) {
-      return '-- 请拖拽表格到画布并创建连接';
+    if (nodes.length === 0) {
+      return '-- 请拖拽表格到画布开始构建查询';
     }
 
-    const usedTables = new Set();
-    edges.forEach(edge => {
-      usedTables.add(edge.source);
-      usedTables.add(edge.target);
-    });
-
-    const tableList = Array.from(usedTables);
-    let sql = 'SELECT\n';
+    let sql = '';
     
-    // Add columns from all used tables
-    const allColumns = tableList.map(tableId => {
-      const table = nodes.find(n => n.id === tableId);
-      return table?.data.fields.map(field => `  ${table.data.label}.${field.name}`) || [];
-    }).flat();
+    // 1. SELECT 子句
+    sql += querySettings.distinct ? 'SELECT DISTINCT\n' : 'SELECT\n';
     
-    if (allColumns.length > 0) {
-      sql += allColumns.join(',\n') + '\n';
-      sql += `FROM ${nodes.find(n => n.id === tableList[0])?.data.label}\n`;
+    // 收集选中的字段
+    const selectedColumns = [];
+    nodes.forEach(node => {
+      const nodeId = node.id;
+      const tableName = node.data.label;
+      const fieldSelections = querySettings.selectedFields[nodeId] || {};
       
-      // Add JOIN clauses
-      edges.forEach(edge => {
-        const sourceTable = nodes.find(n => n.id === edge.source)?.data.label;
-        const targetTable = nodes.find(n => n.id === edge.target)?.data.label;
-        sql += `${edge.label || 'INNER JOIN'} ${targetTable} ON ${sourceTable}.${edge.sourceHandle} = ${targetTable}.${edge.targetHandle}\n`;
+      node.data.fields.forEach(field => {
+        const fieldConfig = fieldSelections[field.name];
+        if (fieldConfig?.selected) {
+          let columnExpr = `${tableName}.${field.name}`;
+          
+          // 添加聚合函数
+          if (fieldConfig.aggregateFunc) {
+            if (fieldConfig.aggregateFunc === 'COUNT(DISTINCT') {
+              columnExpr = `COUNT(DISTINCT ${columnExpr})`;
+            } else {
+              columnExpr = `${fieldConfig.aggregateFunc}(${columnExpr})`;
+            }
+          }
+          
+          // 添加别名
+          if (fieldConfig.alias) {
+            columnExpr += ` AS ${fieldConfig.alias}`;
+          }
+          
+          selectedColumns.push(`  ${columnExpr}`);
+        }
       });
-    } else {
-      sql = '-- 请先添加表格到画布';
+    });
+    
+    if (selectedColumns.length === 0) {
+      selectedColumns.push('  *');
     }
-
-    return sql;
+    
+    sql += selectedColumns.join(',\n') + '\n';
+    
+    // 2. FROM 子句
+    if (nodes.length > 0) {
+      const firstTable = nodes[0].data.label;
+      sql += `FROM ${firstTable}\n`;
+    }
+    
+    // 3. JOIN 子句
+    edges.forEach(edge => {
+      const sourceTable = nodes.find(n => n.id === edge.source)?.data.label;
+      const targetTable = nodes.find(n => n.id === edge.target)?.data.label;
+      if (sourceTable && targetTable) {
+        sql += `${edge.label || 'INNER JOIN'} ${targetTable} ON ${sourceTable}.${edge.sourceHandle} = ${targetTable}.${edge.targetHandle}\n`;
+      }
+    });
+    
+    // 4. WHERE 子句
+    if (querySettings.whereConditions.length > 0 && querySettings.whereConditions.some(cond => cond.field && cond.value)) {
+      sql += 'WHERE ';
+      const conditions = querySettings.whereConditions
+        .filter(cond => cond.field && cond.value)
+        .map(cond => {
+          let value = cond.value;
+          // 如果操作符是IN，保持原样；如果是数字，不加引号；否则加引号
+          if (cond.operator === 'IN') {
+            value = `(${cond.value})`;
+          } else if (isNaN(cond.value)) {
+            value = `'${cond.value}'`;
+          }
+          return `${cond.field} ${cond.operator} ${value}`;
+        });
+      sql += conditions.join(' AND ') + '\n';
+    }
+    
+    // 5. GROUP BY 子句
+    if (querySettings.groupByFields.length > 0) {
+      sql += 'GROUP BY ' + querySettings.groupByFields.join(', ') + '\n';
+    }
+    
+    // 6. HAVING 子句
+    if (querySettings.havingConditions.length > 0) {
+      sql += 'HAVING ';
+      const havingConds = querySettings.havingConditions.map(cond => 
+        `${cond.field} ${cond.operator} '${cond.value}'`
+      );
+      sql += havingConds.join(' AND ') + '\n';
+    }
+    
+    // 7. ORDER BY 子句
+    if (querySettings.orderByFields.length > 0 && querySettings.orderByFields.some(order => order.field)) {
+      sql += 'ORDER BY ';
+      const orderFields = querySettings.orderByFields
+        .filter(order => order.field)
+        .map(order => `${order.field} ${order.direction}`);
+      sql += orderFields.join(', ') + '\n';
+    }
+    
+    // 8. LIMIT 和 OFFSET 子句
+    if (querySettings.limit) {
+      sql += `LIMIT ${querySettings.limit}`;
+      if (querySettings.offset) {
+        sql += ` OFFSET ${querySettings.offset}`;
+      }
+      sql += '\n';
+    }
+    
+    return sql.trim() + ';';
   };
 
   const clearCanvas = () => {
     setNodes([]);
     setEdges([]);
+    setQuerySettings({
+      selectedFields: {},
+      whereConditions: [],
+      groupByFields: [],
+      havingConditions: [],
+      orderByFields: [],
+      distinct: false,
+      limit: null,
+      offset: null
+    });
   };
 
   return (
@@ -562,6 +889,240 @@ export default function TableJoinerFlow() {
                 </CardContent>
               </Card>
             ))}
+            
+            {/* 查询配置面板 */}
+            {nodes.length > 0 && (
+              <Box mt={2}>
+                {/* 基本设置 */}
+                <Accordion>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Box display="flex" alignItems="center">
+                      <SettingsIcon color="primary" style={{ marginRight: 8 }} />
+                      <Typography variant="subtitle2">基本设置</Typography>
+                    </Box>
+                  </AccordionSummary>
+                  <AccordionDetails style={{ flexDirection: 'column' }}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={querySettings.distinct}
+                          onChange={(e) => setQuerySettings(prev => ({ ...prev, distinct: e.target.checked }))}
+                        />
+                      }
+                      label="DISTINCT (去重)"
+                    />
+                    
+                    <Box display="flex" gap={1}>
+                      <TextField
+                        label="LIMIT"
+                        type="number"
+                        value={querySettings.limit || ''}
+                        onChange={(e) => setQuerySettings(prev => ({ ...prev, limit: e.target.value || null }))}
+                        size="small"
+                        style={{ flex: 1 }}
+                      />
+                      <TextField
+                        label="OFFSET"
+                        type="number"
+                        value={querySettings.offset || ''}
+                        onChange={(e) => setQuerySettings(prev => ({ ...prev, offset: e.target.value || null }))}
+                        size="small"
+                        style={{ flex: 1 }}
+                      />
+                    </Box>
+                  </AccordionDetails>
+                </Accordion>
+
+                {/* WHERE条件 */}
+                <Accordion>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Typography variant="subtitle2">WHERE 条件</Typography>
+                  </AccordionSummary>
+                  <AccordionDetails style={{ flexDirection: 'column' }}>
+                    {querySettings.whereConditions.map((condition, index) => (
+                      <Box key={index} display="flex" alignItems="center" gap={1} mb={1}>
+                        <FormControl size="small" style={{ minWidth: 120 }}>
+                          <InputLabel>字段</InputLabel>
+                          <Select
+                            value={condition.field}
+                            onChange={(e) => {
+                              const newConditions = [...querySettings.whereConditions];
+                              newConditions[index].field = e.target.value;
+                              setQuerySettings(prev => ({ ...prev, whereConditions: newConditions }));
+                            }}
+                          >
+                            {nodes.map(node => 
+                              node.data.fields.map(field => (
+                                <MenuItem key={`${node.data.label}.${field.name}`} value={`${node.data.label}.${field.name}`}>
+                                  {node.data.label}.{field.name}
+                                </MenuItem>
+                              ))
+                            )}
+                          </Select>
+                        </FormControl>
+                        
+                        <FormControl size="small" style={{ minWidth: 80 }}>
+                          <InputLabel>操作符</InputLabel>
+                          <Select
+                            value={condition.operator}
+                            onChange={(e) => {
+                              const newConditions = [...querySettings.whereConditions];
+                              newConditions[index].operator = e.target.value;
+                              setQuerySettings(prev => ({ ...prev, whereConditions: newConditions }));
+                            }}
+                          >
+                            <MenuItem value="=">=</MenuItem>
+                            <MenuItem value="!=">!=</MenuItem>
+                            <MenuItem value=">">&gt;</MenuItem>
+                            <MenuItem value=">=">&gt;=</MenuItem>
+                            <MenuItem value="<">&lt;</MenuItem>
+                            <MenuItem value="<=">&lt;=</MenuItem>
+                            <MenuItem value="LIKE">LIKE</MenuItem>
+                            <MenuItem value="IN">IN</MenuItem>
+                          </Select>
+                        </FormControl>
+                        
+                        <TextField
+                          label="值"
+                          size="small"
+                          value={condition.value}
+                          onChange={(e) => {
+                            const newConditions = [...querySettings.whereConditions];
+                            newConditions[index].value = e.target.value;
+                            setQuerySettings(prev => ({ ...prev, whereConditions: newConditions }));
+                          }}
+                          style={{ flex: 1 }}
+                        />
+                        
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            const newConditions = querySettings.whereConditions.filter((_, i) => i !== index);
+                            setQuerySettings(prev => ({ ...prev, whereConditions: newConditions }));
+                          }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Box>
+                    ))}
+                    
+                    <Button
+                      startIcon={<AddIcon />}
+                      onClick={() => {
+                        setQuerySettings(prev => ({
+                          ...prev,
+                          whereConditions: [...prev.whereConditions, { field: '', operator: '=', value: '' }]
+                        }));
+                      }}
+                      size="small"
+                      variant="outlined"
+                    >
+                      添加条件
+                    </Button>
+                  </AccordionDetails>
+                </Accordion>
+
+                {/* GROUP BY */}
+                <Accordion>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Typography variant="subtitle2">GROUP BY</Typography>
+                  </AccordionSummary>
+                  <AccordionDetails style={{ flexDirection: 'column' }}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>选择分组字段</InputLabel>
+                      <Select
+                        multiple
+                        value={querySettings.groupByFields}
+                        onChange={(e) => setQuerySettings(prev => ({ ...prev, groupByFields: e.target.value }))}
+                      >
+                        {nodes.map(node => 
+                          node.data.fields.map(field => (
+                            <MenuItem key={`${node.data.label}.${field.name}`} value={`${node.data.label}.${field.name}`}>
+                              {node.data.label}.{field.name}
+                            </MenuItem>
+                          ))
+                        )}
+                      </Select>
+                    </FormControl>
+                  </AccordionDetails>
+                </Accordion>
+
+                {/* ORDER BY */}
+                <Accordion>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Typography variant="subtitle2">ORDER BY</Typography>
+                  </AccordionSummary>
+                  <AccordionDetails style={{ flexDirection: 'column' }}>
+                    {querySettings.orderByFields.map((order, index) => (
+                      <Box key={index} display="flex" alignItems="center" gap={1} mb={1}>
+                        <FormControl size="small" style={{ flex: 1 }}>
+                          <InputLabel>字段</InputLabel>
+                          <Select
+                            value={order.field}
+                            onChange={(e) => {
+                              const newOrders = [...querySettings.orderByFields];
+                              newOrders[index].field = e.target.value;
+                              setQuerySettings(prev => ({ ...prev, orderByFields: newOrders }));
+                            }}
+                          >
+                            {nodes.map(node => 
+                              node.data.fields.map(field => (
+                                <MenuItem key={`${node.data.label}.${field.name}`} value={`${node.data.label}.${field.name}`}>
+                                  {node.data.label}.{field.name}
+                                </MenuItem>
+                              ))
+                            )}
+                          </Select>
+                        </FormControl>
+                        
+                        <FormControl size="small" style={{ minWidth: 100 }}>
+                          <InputLabel>排序</InputLabel>
+                          <Select
+                            value={order.direction}
+                            onChange={(e) => {
+                              const newOrders = [...querySettings.orderByFields];
+                              newOrders[index].direction = e.target.value;
+                              setQuerySettings(prev => ({ ...prev, orderByFields: newOrders }));
+                            }}
+                          >
+                            <MenuItem value="ASC">升序 (ASC)</MenuItem>
+                            <MenuItem value="DESC">降序 (DESC)</MenuItem>
+                          </Select>
+                        </FormControl>
+                        
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            const newOrders = querySettings.orderByFields.filter((_, i) => i !== index);
+                            setQuerySettings(prev => ({ ...prev, orderByFields: newOrders }));
+                          }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Box>
+                    ))}
+                    
+                    <Button
+                      startIcon={<AddIcon />}
+                      onClick={() => {
+                        setQuerySettings(prev => ({
+                          ...prev,
+                          orderByFields: [...prev.orderByFields, { field: '', direction: 'ASC' }]
+                        }));
+                      }}
+                      size="small"
+                      variant="outlined"
+                    >
+                      添加排序
+                    </Button>
+                  </AccordionDetails>
+                </Accordion>
+                
+                <Typography variant="body2" color="textSecondary" style={{ marginTop: 16 }}>
+                  💡 提示：在表格节点中勾选/取消字段来选择要查询的列
+                </Typography>
+              </Box>
+            )}
           </div>
         </div>
 
@@ -580,7 +1141,7 @@ export default function TableJoinerFlow() {
                   navigator.clipboard.writeText(sql);
                   alert('SQL已复制到剪贴板！\n\n' + sql);
                 }}
-                disabled={edges.length === 0}
+                disabled={nodes.length === 0}
               >
                 复制SQL
               </Button>
