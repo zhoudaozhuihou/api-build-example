@@ -14,6 +14,7 @@ import {
   Code as CodeIcon,
   Home as HomeIcon,
   ArrowDropDown as ArrowDropDownIcon,
+  AccountTree as AccountTreeIcon,
 } from '@material-ui/icons';
 
 const useStyles = makeStyles((theme) => ({
@@ -176,6 +177,24 @@ function Navigation() {
               startIcon={<CategoryIcon />}
             >
               <span className={classes.buttonText}>数据集搜索演示</span>
+            </Button>
+          </Link>
+          <Link to="/visual-join-builder" className={classes.link}>
+            <Button 
+              color="inherit" 
+              className={isActive('/visual-join-builder') ? classes.activeButton : ''}
+              startIcon={<AccountTreeIcon />}
+            >
+              <span className={classes.buttonText}>可视化表关联</span>
+            </Button>
+          </Link>
+          <Link to="/table-joiner-flow" className={classes.link}>
+            <Button 
+              color="inherit" 
+              className={isActive('/table-joiner-flow') ? classes.activeButton : ''}
+              startIcon={<AccountTreeIcon />}
+            >
+              <span className={classes.buttonText}>字段级连线原型</span>
             </Button>
           </Link>
         </Toolbar>

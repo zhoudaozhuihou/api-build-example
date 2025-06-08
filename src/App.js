@@ -17,6 +17,7 @@ import CategorySelectorDemo from './components/CategorySelectorDemo';
 import JsonTableDemo from './pages/JsonTableDemo';
 import JsonComponentDemo from './pages/JsonComponentDemo';
 import DatasetSearchDemo from './pages/DatasetSearchDemo';
+import VisualJoinBuilderDemo from './pages/VisualJoinBuilderDemo';
 
 // 新增页面组件
 import DatasetsPage from './pages/DatasetsPage';
@@ -74,6 +75,8 @@ const ViteIndicator = () => (
 
 import { FeatureFlagProvider, useFeatureFlags } from './contexts/FeatureFlagContext';
 import withFeatureAccess from './hoc/withFeatureAccess';
+
+import TableJoinerFlow from './pages/TableJoinerFlow';
 
 function AppContent() {
   const isAuthenticated = useSelector(selectIsAuthenticated);
@@ -155,6 +158,12 @@ function AppContent() {
               </Route>
               <Route path="/dataset-search-demo">
                 <DatasetSearchDemo />
+              </Route>
+              <Route path="/visual-join-builder">
+                <VisualJoinBuilderDemo />
+              </Route>
+              <Route path="/table-joiner-flow">
+                <TableJoinerFlow />
               </Route>
               
               {/* 统一管理控制台路由 - 替换所有原有分散的管理页面 */}
