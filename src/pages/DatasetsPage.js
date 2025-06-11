@@ -69,7 +69,10 @@ import {
   ChevronLeft as ChevronLeftIcon,
   AccountTree as LineageIcon,
   Category as CategoryOutlinedIcon,
-  Label as LabelIcon
+  Label as LabelIcon,
+  CheckBox as CheckBoxIcon,
+  CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
+  SelectAll as SelectAllIcon
 } from '@material-ui/icons';
 import { makeStyles } from '@material-ui/core/styles';
 import { apiCategories } from '../constants/apiCategories';
@@ -485,8 +488,9 @@ const DatasetsPage = () => {
   const [activeFilters, setActiveFilters] = useState([]);
   const [page, setPage] = useState(1);
 
-  // Mock data for datasets
+  // Mock data for datasets - 扩展到30个数据集支持多页显示
   const datasets = [
+    // 第一页 (1-10)
     {
       id: 1,
       title: '用户行为数据集',
@@ -576,12 +580,378 @@ const DatasetsPage = () => {
       status: 'public',
       popularity: 155,
       image: 'recommendation.jpg'
+    },
+    {
+      id: 7,
+      title: '网站访问日志数据',
+      description: 'Web服务器访问日志，包含用户访问路径、时间戳、IP地址等信息',
+      type: '结构化数据',
+      dataSize: '890 MB',
+      updatedAt: '2023-06-08',
+      categories: ['用户行为', '网站分析'],
+      category: '技术运营',
+      subCategory: '日志分析',
+      fileCount: 7,
+      status: 'public',
+      popularity: 95,
+      image: 'web_logs.jpg'
+    },
+    {
+      id: 8,
+      title: '医疗影像诊断数据集',
+      description: '标注的医疗影像数据，适用于深度学习诊断模型训练',
+      type: '图像数据',
+      dataSize: '8.2 GB',
+      updatedAt: '2023-05-15',
+      categories: ['计算机视觉', '医疗健康'],
+      category: '医疗健康',
+      subCategory: '医疗影像',
+      fileCount: 15,
+      status: 'private',
+      popularity: 180,
+      image: 'medical_images.jpg'
+    },
+    {
+      id: 9,
+      title: '股票价格历史数据',
+      description: '主要股票市场的历史价格数据，包含开盘价、收盘价、成交量等',
+      type: '时间序列',
+      dataSize: '320 MB',
+      updatedAt: '2023-06-12',
+      categories: ['金融', '时间序列分析'],
+      category: '金融服务',
+      subCategory: '股票数据',
+      fileCount: 2,
+      status: 'public',
+      popularity: 240,
+      image: 'stock_data.jpg'
+    },
+    {
+      id: 10,
+      title: '客服对话记录数据',
+      description: '客服中心的对话记录，用于训练智能客服机器人',
+      type: '文本数据',
+      dataSize: '680 MB',
+      updatedAt: '2023-05-28',
+      categories: ['自然语言处理', '客户服务'],
+      category: '用户服务',
+      subCategory: '客服数据',
+      fileCount: 9,
+      status: 'private',
+      popularity: 75,
+      image: 'customer_service.jpg'
+    },
+    // 第二页 (11-20)
+    {
+      id: 11,
+      title: '社交媒体情感数据',
+      description: '社交平台上的用户评论和情感标注，适用于舆情分析',
+      type: '文本数据',
+      dataSize: '1.5 GB',
+      updatedAt: '2023-06-01',
+      categories: ['自然语言处理', '情感分析'],
+      category: '社交媒体',
+      subCategory: '舆情分析',
+      fileCount: 11,
+      status: 'public',
+      popularity: 135,
+      image: 'social_sentiment.jpg'
+    },
+    {
+      id: 12,
+      title: 'IoT传感器数据集',
+      description: '智能设备传感器收集的环境数据，包含温度、湿度、光照等',
+      type: '时间序列',
+      dataSize: '2.1 GB',
+      updatedAt: '2023-05-20',
+      categories: ['物联网', '环境监控'],
+      category: '物联网',
+      subCategory: '传感器数据',
+      fileCount: 20,
+      status: 'public',
+      popularity: 110,
+      image: 'iot_sensors.jpg'
+    },
+    {
+      id: 13,
+      title: '车辆轨迹GPS数据',
+      description: '出租车和网约车的GPS轨迹数据，用于交通流量分析',
+      type: '结构化数据',
+      dataSize: '3.2 GB',
+      updatedAt: '2023-05-25',
+      categories: ['地理信息', '交通运输'],
+      category: '交通运输',
+      subCategory: 'GPS数据',
+      fileCount: 8,
+      status: 'private',
+      popularity: 160,
+      image: 'gps_tracks.jpg'
+    },
+    {
+      id: 14,
+      title: '在线教育学习数据',
+      description: '学生在线学习行为数据，包含学习时长、成绩、互动等信息',
+      type: '结构化数据',
+      dataSize: '540 MB',
+      updatedAt: '2023-06-05',
+      categories: ['教育培训', '学习分析'],
+      category: '教育培训',
+      subCategory: '学习数据',
+      fileCount: 6,
+      status: 'public',
+      popularity: 90,
+      image: 'education_data.jpg'
+    },
+    {
+      id: 15,
+      title: '电商商品图片数据',
+      description: '电商平台商品图片及分类标签，适用于商品识别和推荐',
+      type: '图像数据',
+      dataSize: '6.8 GB',
+      updatedAt: '2023-04-22',
+      categories: ['计算机视觉', '电子商务'],
+      category: '产品相关',
+      subCategory: '商品图片',
+      fileCount: 25,
+      status: 'public',
+      popularity: 200,
+      image: 'product_catalog.jpg'
+    },
+    {
+      id: 16,
+      title: '能源消耗监控数据',
+      description: '建筑物能源消耗数据，包含电力、燃气、水力等消耗记录',
+      type: '时间序列',
+      dataSize: '420 MB',
+      updatedAt: '2023-05-18',
+      categories: ['能源管理', '环境监控'],
+      category: '能源环境',
+      subCategory: '能源数据',
+      fileCount: 4,
+      status: 'private',
+      popularity: 55,
+      image: 'energy_consumption.jpg'
+    },
+    {
+      id: 17,
+      title: '新闻文本分类数据',
+      description: '新闻文章及其分类标签，适用于文本分类和主题建模',
+      type: '文本数据',
+      dataSize: '920 MB',
+      updatedAt: '2023-06-03',
+      categories: ['自然语言处理', '新闻媒体'],
+      category: '新闻媒体',
+      subCategory: '新闻分类',
+      fileCount: 12,
+      status: 'public',
+      popularity: 125,
+      image: 'news_classification.jpg'
+    },
+    {
+      id: 18,
+      title: '人脸识别训练数据',
+      description: '人脸图像及特征点标注，用于人脸识别和表情分析',
+      type: '图像数据',
+      dataSize: '5.5 GB',
+      updatedAt: '2023-04-30',
+      categories: ['计算机视觉', '人脸识别'],
+      category: '人工智能',
+      subCategory: '人脸数据',
+      fileCount: 18,
+      status: 'private',
+      popularity: 190,
+      image: 'face_recognition.jpg'
+    },
+    {
+      id: 19,
+      title: '供应链物流数据',
+      description: '物流配送和供应链管理数据，包含订单、配送、库存等信息',
+      type: '结构化数据',
+      dataSize: '1.8 GB',
+      updatedAt: '2023-05-12',
+      categories: ['供应链', '物流管理'],
+      category: '供应链',
+      subCategory: '物流数据',
+      fileCount: 14,
+      status: 'private',
+      popularity: 85,
+      image: 'supply_chain.jpg'
+    },
+    {
+      id: 20,
+      title: '天气预报历史数据',
+      description: '全球主要城市的天气历史数据，包含温度、湿度、降水等',
+      type: '时间序列',
+      dataSize: '750 MB',
+      updatedAt: '2023-06-07',
+      categories: ['气象数据', '预测建模'],
+      category: '气象环境',
+      subCategory: '天气数据',
+      fileCount: 10,
+      status: 'public',
+      popularity: 170,
+      image: 'weather_data.jpg'
+    },
+    // 第三页 (21-30)
+    {
+      id: 21,
+      title: '音频语音识别数据',
+      description: '多语言语音录音及文本标注，适用于语音识别模型训练',
+      type: '文本数据',
+      dataSize: '4.2 GB',
+      updatedAt: '2023-05-08',
+      categories: ['语音识别', '自然语言处理'],
+      category: '人工智能',
+      subCategory: '语音数据',
+      fileCount: 22,
+      status: 'public',
+      popularity: 145,
+      image: 'speech_recognition.jpg'
+    },
+    {
+      id: 22,
+      title: '网络安全威胁数据',
+      description: '网络攻击日志和安全事件数据，用于安全威胁检测',
+      type: '结构化数据',
+      dataSize: '1.3 GB',
+      updatedAt: '2023-04-25',
+      categories: ['网络安全', '威胁检测'],
+      category: '网络安全',
+      subCategory: '安全日志',
+      fileCount: 16,
+      status: 'private',
+      popularity: 100,
+      image: 'cybersecurity.jpg'
+    },
+    {
+      id: 23,
+      title: '房地产市场数据',
+      description: '房地产交易和价格数据，包含地区、面积、价格等信息',
+      type: '结构化数据',
+      dataSize: '680 MB',
+      updatedAt: '2023-05-31',
+      categories: ['房地产', '价格分析'],
+      category: '房地产',
+      subCategory: '市场数据',
+      fileCount: 5,
+      status: 'public',
+      popularity: 115,
+      image: 'real_estate.jpg'
+    },
+    {
+      id: 24,
+      title: '游戏用户行为数据',
+      description: '手机游戏用户行为和付费数据，用于用户画像和游戏优化',
+      type: '结构化数据',
+      dataSize: '2.5 GB',
+      updatedAt: '2023-06-11',
+      categories: ['游戏娱乐', '用户行为'],
+      category: '游戏娱乐',
+      subCategory: '游戏数据',
+      fileCount: 13,
+      status: 'private',
+      popularity: 130,
+      image: 'gaming_behavior.jpg'
+    },
+    {
+      id: 25,
+      title: '卫星遥感图像数据',
+      description: '卫星拍摄的地表图像，用于地理信息分析和环境监测',
+      type: '图像数据',
+      dataSize: '12.5 GB',
+      updatedAt: '2023-04-15',
+      categories: ['遥感技术', '地理信息'],
+      category: '地理信息',
+      subCategory: '遥感数据',
+      fileCount: 30,
+      status: 'public',
+      popularity: 185,
+      image: 'satellite_imagery.jpg'
+    },
+    {
+      id: 26,
+      title: '制造业质量检测数据',
+      description: '工业产品质量检测数据，包含缺陷检测和质量评估',
+      type: '结构化数据',
+      dataSize: '980 MB',
+      updatedAt: '2023-05-27',
+      categories: ['制造业', '质量控制'],
+      category: '制造业',
+      subCategory: '质量数据',
+      fileCount: 8,
+      status: 'private',
+      popularity: 70,
+      image: 'quality_control.jpg'
+    },
+    {
+      id: 27,
+      title: '农业作物监测数据',
+      description: '农作物生长监测和产量预测数据，包含土壤、气候等因素',
+      type: '时间序列',
+      dataSize: '1.1 GB',
+      updatedAt: '2023-05-19',
+      categories: ['农业科技', '作物监测'],
+      category: '农业科技',
+      subCategory: '作物数据',
+      fileCount: 11,
+      status: 'public',
+      popularity: 80,
+      image: 'agriculture_monitoring.jpg'
+    },
+    {
+      id: 28,
+      title: '智能交通信号数据',
+      description: '城市交通信号灯和车流量数据，用于智能交通管理',
+      type: '时间序列',
+      dataSize: '1.6 GB',
+      updatedAt: '2023-06-04',
+      categories: ['智能交通', '城市管理'],
+      category: '智能城市',
+      subCategory: '交通数据',
+      fileCount: 17,
+      status: 'private',
+      popularity: 140,
+      image: 'smart_traffic.jpg'
+    },
+    {
+      id: 29,
+      title: '电商商品评价数据',
+      description: '用户对商品的评价文本和评分，适用于推荐系统和情感分析',
+      type: '文本数据',
+      dataSize: '1.9 GB',
+      updatedAt: '2023-05-24',
+      categories: ['电子商务', '推荐系统'],
+      category: '产品相关',
+      subCategory: '用户评价',
+      fileCount: 19,
+      status: 'public',
+      popularity: 195,
+      image: 'product_reviews.jpg'
+    },
+    {
+      id: 30,
+      title: '区块链交易数据',
+      description: '区块链网络的交易记录和地址信息，用于加密货币分析',
+      type: '结构化数据',
+      dataSize: '3.8 GB',
+      updatedAt: '2023-06-09',
+      categories: ['区块链', '金融科技'],
+      category: '金融科技',
+      subCategory: '区块链数据',
+      fileCount: 24,
+      status: 'public',
+      popularity: 220,
+      image: 'blockchain_data.jpg'
     }
   ];
 
   // 筛选后的数据集
   const [filteredDatasets, setFilteredDatasets] = useState(datasets);
 
+  // 选择相关状态
+  const [selectedDatasets, setSelectedDatasets] = useState(new Set());
+  const [selectMode, setSelectMode] = useState(false);
+  
   // 分类编辑相关状态
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -703,6 +1073,7 @@ const DatasetsPage = () => {
     setDataSizeFilter('all');
     setStartDate('');
     setEndDate('');
+    setPage(1); // 重置到第一页
   };
 
   // 数据转换辅助函数
@@ -1444,6 +1815,82 @@ const DatasetsPage = () => {
     console.log('切换页面:', newPage);
   };
 
+  // 选择相关处理函数
+  const toggleSelectMode = () => {
+    setSelectMode(!selectMode);
+    if (selectMode) {
+      // 退出选择模式时清空选择
+      setSelectedDatasets(new Set());
+    }
+  };
+
+  const handleDatasetSelect = (datasetId, isSelected) => {
+    const newSelected = new Set(selectedDatasets);
+    if (isSelected) {
+      newSelected.add(datasetId);
+    } else {
+      newSelected.delete(datasetId);
+    }
+    setSelectedDatasets(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    const currentPageDatasets = getCurrentPageDatasets();
+    const allCurrentSelected = currentPageDatasets.every(dataset => 
+      selectedDatasets.has(dataset.id)
+    );
+    
+    const newSelected = new Set(selectedDatasets);
+    
+    if (allCurrentSelected) {
+      // 取消当前页所有选择
+      currentPageDatasets.forEach(dataset => {
+        newSelected.delete(dataset.id);
+      });
+    } else {
+      // 选择当前页所有
+      currentPageDatasets.forEach(dataset => {
+        newSelected.add(dataset.id);
+      });
+    }
+    
+    setSelectedDatasets(newSelected);
+  };
+
+  const handleSelectAllPages = () => {
+    if (selectedDatasets.size === filteredDatasets.length) {
+      // 取消全部选择
+      setSelectedDatasets(new Set());
+    } else {
+      // 选择全部
+      const allIds = new Set(filteredDatasets.map(dataset => dataset.id));
+      setSelectedDatasets(allIds);
+    }
+  };
+
+  const handleBatchDelete = () => {
+    if (selectedDatasets.size > 0) {
+      console.log('批量删除:', Array.from(selectedDatasets));
+      // TODO: 实现批量删除逻辑
+      setSelectedDatasets(new Set());
+    }
+  };
+
+  const handleBatchDownload = () => {
+    if (selectedDatasets.size > 0) {
+      console.log('批量下载:', Array.from(selectedDatasets));
+      // TODO: 实现批量下载逻辑
+    }
+  };
+
+  // 获取当前页数据集
+  const getCurrentPageDatasets = () => {
+    const itemsPerPage = 10;
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredDatasets.slice(startIndex, endIndex);
+  };
+
 
 
   // 配置数据集页面的各个部分
@@ -1470,7 +1917,17 @@ const DatasetsPage = () => {
           <div style={{ fontSize: '0.8rem', color: '#666' }}>{item.type}</div>
         </div>
       </div>
-    )
+    ),
+    // 添加批量选择按钮到头部
+    extraActions: [
+      {
+        label: selectMode ? '退出批量选择' : '批量选择',
+        icon: selectMode ? 'close' : 'checklist',
+        color: selectMode ? 'secondary' : 'primary',
+        variant: selectMode ? 'contained' : 'outlined',
+        onClick: toggleSelectMode
+      }
+    ]
   };
 
   const filterConfigData = {
@@ -1519,14 +1976,27 @@ const DatasetsPage = () => {
 
   const cardGridConfigData = {
     ...datasetCardGridConfig,
-    items: filteredDatasets,
+    items: getCurrentPageDatasets(), // 使用分页数据
+    totalItems: filteredDatasets.length, // 总数据量
     totalCount: filteredDatasets.length,
     publicCount: filteredDatasets.filter(dataset => dataset.status === 'public').length,
     searchQuery,
     onSearchClear: handleSearchClear,
     renderCard: (dataset) => renderDatasetCard(dataset),
+    page: page,
+    onPageChange: (event, newPage) => setPage(newPage),
+    itemsPerPage: 10,
+    showPagination: true,
     customStats: [
-      // 可以添加额外的统计信息芯片
+      // 选择状态统计
+      ...(selectMode || selectedDatasets.size > 0 ? [
+        { 
+          icon: CheckBoxIcon, 
+          label: `已选择 ${selectedDatasets.size} 个`, 
+          color: "secondary",
+          variant: "outlined"
+        }
+      ] : [])
     ]
   };
 
@@ -1541,6 +2011,9 @@ const DatasetsPage = () => {
 
   const handleNewFilterChange = (filterKey, value) => {
     console.log('Filter change:', filterKey, value);
+    
+    // 筛选变更时重置到第一页
+    setPage(1);
     
     switch (filterKey) {
       case 'accessLevel':
@@ -1593,32 +2066,51 @@ const DatasetsPage = () => {
   const renderDatasetCard = (dataset) => {
     const safeDataset = {
       id: dataset?.id || 'unknown',
-      name: dataset?.name || '未知数据集',
+      title: dataset?.title || '未知数据集',
       description: dataset?.description || '暂无描述',
       type: dataset?.type || '未知类型',
       status: dataset?.status || 'private',
-      size: dataset?.size || '0MB',
-      lastUpdated: dataset?.lastUpdated || '未知',
-      downloadCount: dataset?.downloadCount || 0,
+      dataSize: dataset?.dataSize || '0MB',
+      updatedAt: dataset?.updatedAt || '未知',
+      fileCount: dataset?.fileCount || 0,
       categories: dataset?.categories || [],
       tags: dataset?.tags || [],
       owner: dataset?.owner || '未知',
       format: dataset?.format || '未知格式',
-      isFavorite: dataset?.isFavorite || false,
+      popularity: dataset?.popularity || 0,
       ...dataset
     };
 
+    const isSelected = selectedDatasets.has(safeDataset.id);
+    
     return (
-      <Card key={safeDataset.id} className={classes.card} onClick={() => handleDatasetDetailOpen(safeDataset)}>
+      <Card 
+        key={safeDataset.id} 
+        className={classes.card} 
+        style={{
+          border: isSelected ? '2px solid #1976d2' : '1px solid rgba(0,0,0,0.12)',
+          backgroundColor: isSelected ? 'rgba(25, 118, 210, 0.04)' : 'white'
+        }}
+        onClick={(e) => {
+          if (selectMode) {
+            e.stopPropagation();
+            handleDatasetSelect(safeDataset.id, !isSelected);
+          } else {
+            handleDatasetDetailOpen(safeDataset);
+          }
+        }}
+      >
         {/* 顶部渐变条 */}
         <Box 
           style={{
             height: '4px',
-            background: 'linear-gradient(90deg, #1976d2 0%, #42a5f5 100%)'
+            background: isSelected 
+              ? 'linear-gradient(90deg, #1976d2 0%, #42a5f5 100%)'
+              : 'linear-gradient(90deg, #1976d2 0%, #42a5f5 100%)'
           }} 
         />
         
-        {/* 卡片头部 - 标题和状态 */}
+        {/* 卡片头部 - 选择框、标题和状态 */}
         <CardContent style={{ 
           padding: '16px 16px 0px 16px',
           minHeight: '80px',
@@ -1627,15 +2119,41 @@ const DatasetsPage = () => {
           flexDirection: 'column'
         }}>
           <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
-            <Box flex={1} mr={1}>
-              <Typography className={classes.datasetTitle}>
-                {safeDataset.name}
-              </Typography>
-              <Typography className={classes.datasetType}>
-                <StorageIcon className={classes.datasetIcon} />
-                {safeDataset.type}
-              </Typography>
+            {/* 左侧：选择框和标题 */}
+            <Box flex={1} mr={1} display="flex" alignItems="flex-start">
+              {/* 复选框 - 始终显示，但在非选择模式下透明度较低 */}
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!selectMode) {
+                    // 如果不在选择模式，先进入选择模式
+                    setSelectMode(true);
+                  }
+                  handleDatasetSelect(safeDataset.id, !isSelected);
+                }}
+                style={{ 
+                  marginRight: 8, 
+                  marginTop: -4,
+                  color: isSelected ? '#1976d2' : selectMode ? '#666' : '#ddd',
+                  opacity: selectMode ? 1 : 0.6,
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {isSelected ? <CheckBoxIcon /> : <CheckBoxOutlineBlankIcon />}
+              </IconButton>
+              <Box flex={1}>
+                <Typography className={classes.datasetTitle}>
+                  {safeDataset.title}
+                </Typography>
+                <Typography className={classes.datasetType}>
+                  <StorageIcon className={classes.datasetIcon} />
+                  {safeDataset.type}
+                </Typography>
+              </Box>
             </Box>
+            
+            {/* 右侧：状态芯片 */}
             <Box display="flex" flexDirection="column" alignItems="flex-end">
               <Chip 
                 label={safeDataset.status === 'public' ? '公开' : safeDataset.status === 'private' ? '私有' : '受限'}
@@ -1676,15 +2194,20 @@ const DatasetsPage = () => {
           {/* 数据集信息 */}
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
             <Typography variant="caption" color="textSecondary">
-              大小: {safeDataset.size}
+              大小: {safeDataset.dataSize}
             </Typography>
             <Typography variant="caption" color="textSecondary">
-              下载: {safeDataset.downloadCount}次
+              {safeDataset.fileCount} 个文件
             </Typography>
           </Box>
-          <Typography variant="caption" color="textSecondary">
-            更新: {safeDataset.lastUpdated}
-          </Typography>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Typography variant="caption" color="textSecondary">
+              更新: {safeDataset.updatedAt}
+            </Typography>
+            <Typography variant="caption" color="textSecondary">
+              热度: {safeDataset.popularity}
+            </Typography>
+          </Box>
         </CardContent>
 
         {/* 卡片底部 - 分类标签和操作按钮，分两行显示 */}
@@ -1832,6 +2355,131 @@ const DatasetsPage = () => {
 
   return (
     <div className={classes.root}>
+      {/* 批量选择提示横幅 */}
+      {!selectMode && selectedDatasets.size === 0 && (
+        <Container maxWidth="xl">
+          <Paper 
+            elevation={1} 
+            style={{ 
+              padding: '8px 16px', 
+              marginBottom: '8px',
+              backgroundColor: '#e3f2fd',
+              borderLeft: '3px solid #2196f3',
+              cursor: 'pointer'
+            }}
+            onClick={toggleSelectMode}
+          >
+            <Box display="flex" justifyContent="space-between" alignItems="center">
+              <Typography variant="body2" color="primary">
+                💡 点击这里启用批量选择模式，可以同时选择多个数据集进行操作
+              </Typography>
+              <Button 
+                size="small" 
+                variant="outlined"
+                color="primary"
+                startIcon={<CheckBoxIcon />}
+              >
+                启用批量选择
+              </Button>
+            </Box>
+          </Paper>
+        </Container>
+      )}
+
+      {/* 选择工具栏 */}
+      {(selectMode || selectedDatasets.size > 0) && (
+        <Container maxWidth="xl">
+          <Paper 
+            elevation={3} 
+            style={{ 
+              padding: '16px 24px', 
+              marginBottom: '16px',
+              backgroundColor: selectMode ? '#f3e5f5' : '#f5f5f5',
+              borderLeft: `4px solid ${selectMode ? '#9c27b0' : '#1976d2'}`,
+              borderRadius: '8px'
+            }}
+          >
+            <Box display="flex" justifyContent="space-between" alignItems="center">
+              <Box display="flex" alignItems="center" gap={2}>
+                <CheckBoxIcon color={selectMode ? 'secondary' : 'primary'} />
+                <Typography variant="h6" style={{ fontWeight: 600 }}>
+                  {selectMode ? (
+                    selectedDatasets.size > 0 
+                      ? `已选择 ${selectedDatasets.size} 个数据集 (共 ${filteredDatasets.length} 个)`
+                      : `批量选择模式 - 点击卡片左上角复选框进行选择`
+                  ) : (
+                    `已选择 ${selectedDatasets.size} 个数据集`
+                  )}
+                </Typography>
+                
+                {selectMode && (
+                  <Box display="flex" gap={1}>
+                    <Button 
+                      size="small" 
+                      variant="outlined"
+                      color="secondary"
+                      startIcon={<SelectAllIcon />}
+                      onClick={handleSelectAll}
+                    >
+                      {getCurrentPageDatasets().every(dataset => selectedDatasets.has(dataset.id)) 
+                        ? `取消当前页 (${getCurrentPageDatasets().length}个)` 
+                        : `选择当前页 (${getCurrentPageDatasets().length}个)`
+                      }
+                    </Button>
+                    <Button 
+                      size="small" 
+                      variant="outlined"
+                      color="secondary"
+                      onClick={handleSelectAllPages}
+                    >
+                      {selectedDatasets.size === filteredDatasets.length 
+                        ? `取消全部 (${filteredDatasets.length}个)` 
+                        : `选择全部 (${filteredDatasets.length}个)`
+                      }
+                    </Button>
+                  </Box>
+                )}
+              </Box>
+              
+              <Box display="flex" alignItems="center" gap={1}>
+                {selectedDatasets.size > 0 && (
+                  <>
+                    <Button 
+                      size="medium" 
+                      variant="contained"
+                      color="primary"
+                      startIcon={<DownloadIcon />}
+                      onClick={handleBatchDownload}
+                    >
+                      批量下载 ({selectedDatasets.size})
+                    </Button>
+                    <Button 
+                      size="medium" 
+                      variant="outlined"
+                      color="secondary"
+                      startIcon={<DeleteIcon />}
+                      onClick={handleBatchDelete}
+                    >
+                      批量删除 ({selectedDatasets.size})
+                    </Button>
+                  </>
+                )}
+                
+                <Button 
+                  size="medium" 
+                  variant={selectMode ? "contained" : "outlined"}
+                  color={selectMode ? "secondary" : "primary"}
+                  onClick={toggleSelectMode}
+                  startIcon={selectMode ? undefined : <CheckBoxIcon />}
+                >
+                  {selectMode ? '退出批量选择' : '进入批量选择'}
+                </Button>
+              </Box>
+            </Box>
+          </Paper>
+        </Container>
+      )}
+      
       <ManagementLayout
         headerConfig={headerConfigData}
         filterConfig={filterConfigData}

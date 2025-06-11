@@ -37,10 +37,10 @@ export const datasetFilterConfig = {
       defaultExpanded: true,
       showCounts: true,
       options: [
-        { value: '结构化数据', label: '结构化数据', count: 3 },
-        { value: '文本数据', label: '文本数据', count: 1 },
-        { value: '时间序列', label: '时间序列', count: 1 },
-        { value: '图像数据', label: '图像数据', count: 1 }
+        { value: '结构化数据', label: '结构化数据', count: 15 },
+        { value: '文本数据', label: '文本数据', count: 8 },
+        { value: '时间序列', label: '时间序列', count: 6 },
+        { value: '图像数据', label: '图像数据', count: 5 }
       ]
     },
     {
@@ -52,18 +52,31 @@ export const datasetFilterConfig = {
       defaultExpanded: false,
       showCounts: true,
       options: [
-        { value: '用户行为', label: '用户行为', count: 1 },
-        { value: '电子商务', label: '电子商务', count: 1 },
-        { value: '自然语言处理', label: '自然语言处理', count: 1 },
-        { value: '情感分析', label: '情感分析', count: 1 },
-        { value: '时间序列分析', label: '时间序列分析', count: 1 },
-        { value: '预测建模', label: '预测建模', count: 1 },
-        { value: '计算机视觉', label: '计算机视觉', count: 1 },
-        { value: '图像分类', label: '图像分类', count: 1 },
-        { value: '金融', label: '金融', count: 1 },
+        { value: '用户行为', label: '用户行为', count: 3 },
+        { value: '电子商务', label: '电子商务', count: 3 },
+        { value: '自然语言处理', label: '自然语言处理', count: 5 },
+        { value: '情感分析', label: '情感分析', count: 2 },
+        { value: '时间序列分析', label: '时间序列分析', count: 2 },
+        { value: '预测建模', label: '预测建模', count: 2 },
+        { value: '计算机视觉', label: '计算机视觉', count: 4 },
+        { value: '图像分类', label: '图像分类', count: 2 },
+        { value: '金融', label: '金融', count: 2 },
         { value: '风险评估', label: '风险评估', count: 1 },
-        { value: '推荐系统', label: '推荐系统', count: 1 },
-        { value: '协同过滤', label: '协同过滤', count: 1 }
+        { value: '推荐系统', label: '推荐系统', count: 2 },
+        { value: '协同过滤', label: '协同过滤', count: 1 },
+        { value: '医疗健康', label: '医疗健康', count: 1 },
+        { value: '物联网', label: '物联网', count: 1 },
+        { value: '地理信息', label: '地理信息', count: 2 },
+        { value: '交通运输', label: '交通运输', count: 1 },
+        { value: '教育培训', label: '教育培训', count: 1 },
+        { value: '网络安全', label: '网络安全', count: 1 },
+        { value: '语音识别', label: '语音识别', count: 1 },
+        { value: '人脸识别', label: '人脸识别', count: 1 },
+        { value: '遥感技术', label: '遥感技术', count: 1 },
+        { value: '制造业', label: '制造业', count: 1 },
+        { value: '农业科技', label: '农业科技', count: 1 },
+        { value: '区块链', label: '区块链', count: 1 },
+        { value: '金融科技', label: '金融科技', count: 1 }
       ]
     },
     {

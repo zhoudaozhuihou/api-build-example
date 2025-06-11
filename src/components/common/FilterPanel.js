@@ -25,19 +25,22 @@ import {
 const useStyles = makeStyles((theme) => ({
   filterContainer: {
     marginBottom: theme.spacing(3),
+    padding: theme.spacing(2),
+    backgroundColor: theme.palette.background.paper,
+    borderRadius: theme.shape.borderRadius,
+    boxShadow: theme.shadows[2],
   },
   filterHeader: {
-    padding: theme.spacing(2),
-    backgroundColor: theme.palette.primary.main,
-    color: theme.palette.primary.contrastText,
-    borderRadius: `${theme.shape.borderRadius}px ${theme.shape.borderRadius}px 0 0`,
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    fontWeight: 600,
+    marginBottom: theme.spacing(2),
+    fontWeight: 500,
+    fontSize: '1.1rem',
+    color: theme.palette.text.primary,
   },
   filterHeaderIcon: {
     marginRight: theme.spacing(1),
+    color: theme.palette.primary.main,
   },
   accordion: {
     boxShadow: 'none',
@@ -47,34 +50,42 @@ const useStyles = makeStyles((theme) => ({
     '&.Mui-expanded': {
       margin: 0,
     },
+    marginBottom: theme.spacing(1),
+    '&:last-child': {
+      marginBottom: 0,
+    },
   },
   accordionSummary: {
-    backgroundColor: theme.palette.grey[50],
+    backgroundColor: 'transparent',
     borderBottom: `1px solid ${theme.palette.divider}`,
-    minHeight: 48,
+    minHeight: 40,
+    padding: theme.spacing(0.5, 1),
     '&.Mui-expanded': {
-      minHeight: 48,
+      minHeight: 40,
     },
     '& .MuiAccordionSummary-content': {
-      margin: `${theme.spacing(1)}px 0`,
+      margin: `${theme.spacing(0.5)}px 0`,
       '&.Mui-expanded': {
-        margin: `${theme.spacing(1)}px 0`,
+        margin: `${theme.spacing(0.5)}px 0`,
       },
     },
   },
   accordionDetails: {
-    padding: theme.spacing(2),
+    padding: theme.spacing(1.5),
+    paddingTop: theme.spacing(1),
     flexDirection: 'column',
   },
   sectionTitle: {
-    fontWeight: 600,
+    fontWeight: 500,
     display: 'flex',
     alignItems: 'center',
     fontSize: '0.9rem',
+    color: theme.palette.text.secondary,
   },
   sectionIcon: {
     marginRight: theme.spacing(1),
     fontSize: '1rem',
+    color: theme.palette.text.secondary,
   },
   chipContainer: {
     display: 'flex',
@@ -295,7 +306,7 @@ const FilterPanel = ({
     <div className={classes.filterContainer}>
       <div className={classes.filterHeader}>
         <FilterIcon className={classes.filterHeaderIcon} />
-        {title}
+        <Typography variant="h6">{title}</Typography>
       </div>
       
       {sections.map((section) => (
