@@ -515,7 +515,14 @@ const LoginPage = () => {
   const { translate } = useI18n();
   
   // 获取重定向地址，作为useEffect依赖的一部分使用
-  const from = location.state?.from?.pathname || '/';
+  const from = (() => {
+    const pathname = location.state?.from?.pathname;
+    // 确保路径格式正确，以/开头且不包含协议
+    if (pathname && typeof pathname === 'string' && pathname.startsWith('/') && !pathname.includes('://')) {
+      return pathname;
+    }
+    return '/';
+  })();
   
   // Redux 状态
   const isAuthenticated = useSelector(selectIsAuthenticated);
@@ -533,7 +540,32 @@ const LoginPage = () => {
   // 如果已经登录，则重定向
   useEffect(() => {
     if (isAuthenticated) {
-      history.replace(from);
+      try {
+        // 验证URL是否为有效的路径
+        if (from && from !== '/' && !from.includes('://')) {
+          // 检查路径是否存在于我们的路由中
+          const validPaths = [
+            '/marketing', '/developer', '/catalog', '/datasets', 
+            '/review-orders', '/analytics', '/lowcode', '/category-demo',
+            '/json-table-demo', '/json-component-demo', '/dataset-search-demo',
+            '/visual-join-builder', '/table-joiner-flow', '/interactive-table-demo',
+            '/search-dropdown-demo', '/admin', '/unauthorized'
+          ];
+          
+          const isValidPath = validPaths.some(path => from.startsWith(path)) || from === '/';
+          
+          if (isValidPath) {
+            history.replace(from);
+          } else {
+            history.replace('/');
+          }
+        } else {
+          history.replace('/');
+        }
+      } catch (error) {
+        console.warn('Error during redirect:', error);
+        history.replace('/');
+      }
     }
   }, [isAuthenticated, history, from]);
   

@@ -77,6 +77,8 @@ import { FeatureFlagProvider, useFeatureFlags } from './contexts/FeatureFlagCont
 import withFeatureAccess from './hoc/withFeatureAccess';
 
 import TableJoinerFlow from './pages/TableJoinerFlow';
+import InteractiveTableDemo from './pages/InteractiveTableDemo';
+import SearchDropdownDemo from './pages/SearchDropdownDemo';
 
 function AppContent() {
   const isAuthenticated = useSelector(selectIsAuthenticated);
@@ -164,6 +166,12 @@ function AppContent() {
               </Route>
               <Route path="/table-joiner-flow">
                 <TableJoinerFlow />
+              </Route>
+              <Route path="/interactive-table-demo">
+                <InteractiveTableDemo />
+              </Route>
+              <Route path="/search-dropdown-demo">
+                <SearchDropdownDemo />
               </Route>
               
               {/* 统一管理控制台路由 - 替换所有原有分散的管理页面 */}

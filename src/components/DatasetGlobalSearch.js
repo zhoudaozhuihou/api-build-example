@@ -244,7 +244,8 @@ const DatasetGlobalSearch = ({
   datasets = [], 
   loading = false,
   searchResults = [],
-  totalResults = 0 
+  totalResults = 0,
+  onOpenSearchResults 
 }) => {
   const classes = useStyles();
   const [searchQuery, setSearchQuery] = useState('');
@@ -559,6 +560,18 @@ const DatasetGlobalSearch = ({
                 onSearch && onSearch({ query: '', scope: searchScope, filters: quickFilters, advanced: advancedFilters });
               }}
             />
+          )}
+          {totalResults > 0 && searchQuery && onOpenSearchResults && (
+            <Button
+              size="small"
+              variant="outlined"
+              color="primary"
+              startIcon={<VisibilityIcon />}
+              onClick={() => onOpenSearchResults(searchQuery)}
+              style={{ marginLeft: 8 }}
+            >
+              查看详细结果
+            </Button>
           )}
         </Box>
       )}

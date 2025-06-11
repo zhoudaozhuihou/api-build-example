@@ -21,10 +21,13 @@ import {
   List,
   ListItem,
   ListItemText,
+  ListItemIcon,
+  ListItemSecondaryAction,
   Switch,
   InputBase,
   Tooltip,
-  LinearProgress
+  LinearProgress,
+  CircularProgress
 } from '@material-ui/core';
 import { TreeView, TreeItem } from '@material-ui/lab';
 import { 
@@ -63,7 +66,9 @@ import FeatureGuard from '../components/FeatureGuard';
 import DatasetUploadDialog from '../components/DatasetUploadDialog';
 import DatasetFilter from '../components/DatasetFilter';
 import DatasetDetailDialog from '../components/DatasetDetailDialog';
-import DatasetGlobalSearch from '../components/DatasetGlobalSearch';
+import SearchDropdown from '../components/SearchDropdown';
+
+import DatasetSearchResultDialog from '../components/DatasetSearchResultDialog';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -345,6 +350,10 @@ const DatasetsPage = () => {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedDatasetForDetail, setSelectedDatasetForDetail] = useState(null);
   
+  // 搜索结果对话框状态
+  const [searchResultDialogOpen, setSearchResultDialogOpen] = useState(false);
+  const [currentSearchQuery, setCurrentSearchQuery] = useState('');
+  
   // 筛选器状态
   const [statusFilter, setStatusFilter] = useState(null);
   const [typeFilters, setTypeFilters] = useState([]);
@@ -456,6 +465,69 @@ const DatasetsPage = () => {
   const [globalSearchResults, setGlobalSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [totalSearchResults, setTotalSearchResults] = useState(0);
+  
+  // 高级搜索状态
+  const [searchScope, setSearchScope] = useState(['all']);
+  const [quickFilters, setQuickFilters] = useState({
+    type: '',
+    status: '',
+    size: '',
+    popularity: ''
+  });
+  const [advancedFilters, setAdvancedFilters] = useState({
+    title: '',
+    description: '',
+    author: '',
+    dateRange: { start: '', end: '' }
+  });
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+
+  // 搜索处理函数
+  const handleSearchQueryChange = (event) => {
+    const value = event.target.value;
+    setSearchQuery(value);
+    
+    // 实时搜索
+    if (value.trim()) {
+      performGlobalSearch({
+        query: value,
+        scope: searchScope,
+        filters: quickFilters,
+        advanced: advancedFilters
+      });
+    } else {
+      setGlobalSearchResults([]);
+      setTotalSearchResults(0);
+      setFilteredDatasets(datasets);
+    }
+  };
+
+  const handleSearchClear = () => {
+    setSearchQuery('');
+    setGlobalSearchResults([]);
+    setTotalSearchResults(0);
+    setShowSearchResults(false);
+    setFilteredDatasets(datasets);
+  };
+
+  const handleSearchResultClick = (dataset) => {
+    handleDatasetDetailOpen(dataset);
+  };
+
+  const handleSearchViewAll = () => {
+    handleSearchResultDialogOpen(searchQuery);
+  };
+
+  // 转换数据集格式以适配SearchDropdown组件
+  const transformedSearchResults = globalSearchResults.map(dataset => ({
+    id: dataset.id,
+    title: dataset.title,
+    description: dataset.description,
+    type: dataset.type,
+    size: dataset.dataSize,
+    status: dataset.status === 'public' ? '公开' : '私有'
+  }));
 
   // 筛选处理函数
   const handleStatusFilterChange = (status) => {
@@ -668,8 +740,140 @@ const DatasetsPage = () => {
     setSelectedCard(null);
   };
 
-  const handleSearchChange = (event) => {
-    setSearchQuery(event.target.value);
+
+  
+  const handleKeyPress = (event) => {
+    if (event.key === 'Enter' && searchQuery.trim()) {
+      handleEnhancedSearch();
+    }
+  };
+  
+  const handleEnhancedSearch = () => {
+    if (searchQuery.trim()) {
+      performGlobalSearch({
+        query: searchQuery,
+        scope: searchScope,
+        filters: quickFilters,
+        advanced: advancedFilters
+      });
+      setShowSearchResults(true);
+    }
+  };
+  
+  const handleQuickFilterChange = (filterType, value) => {
+    const newQuickFilters = {
+      ...quickFilters,
+      [filterType]: quickFilters[filterType] === value ? '' : value
+    };
+    setQuickFilters(newQuickFilters);
+    
+    // 如果有搜索词，重新搜索
+    if (searchQuery.trim()) {
+      performGlobalSearch({
+        query: searchQuery,
+        scope: searchScope,
+        filters: newQuickFilters,
+        advanced: advancedFilters
+      });
+    }
+  };
+  
+  const performGlobalSearch = async (searchParams) => {
+    setSearchLoading(true);
+    try {
+      let results = [...datasets];
+      
+      // 基本搜索
+      if (searchParams.query) {
+        const query = searchParams.query.toLowerCase();
+        
+        if (searchParams.scope.includes('all')) {
+          // 全字段搜索
+          results = results.filter(dataset => 
+            dataset.title.toLowerCase().includes(query) || 
+            dataset.description.toLowerCase().includes(query) ||
+            dataset.type.toLowerCase().includes(query) ||
+            (dataset.categories && dataset.categories.some(cat => cat.toLowerCase().includes(query))) ||
+            (dataset.category && dataset.category.toLowerCase().includes(query)) ||
+            (dataset.subCategory && dataset.subCategory.toLowerCase().includes(query))
+          );
+        } else {
+          // 指定字段搜索
+          results = results.filter(dataset => {
+            return searchParams.scope.some(scope => {
+              switch (scope) {
+                case 'title':
+                  return dataset.title.toLowerCase().includes(query);
+                case 'description':
+                  return dataset.description.toLowerCase().includes(query);
+                case 'categories':
+                  return dataset.categories && dataset.categories.some(cat => cat.toLowerCase().includes(query));
+                case 'tags':
+                  return dataset.categories && dataset.categories.some(cat => cat.toLowerCase().includes(query));
+                case 'author':
+                  return dataset.author && dataset.author.toLowerCase().includes(query);
+                default:
+                  return false;
+              }
+            });
+          });
+        }
+      }
+      
+      // 快速筛选
+      if (searchParams.filters.type) {
+        const typeMap = {
+          'structured': '结构化数据',
+          'text': '文本数据',
+          'image': '图像数据',
+          'timeseries': '时间序列'
+        };
+        const targetType = typeMap[searchParams.filters.type];
+        if (targetType) {
+          results = results.filter(dataset => dataset.type === targetType);
+        }
+      }
+      
+      if (searchParams.filters.status) {
+        results = results.filter(dataset => dataset.status === searchParams.filters.status);
+      }
+      
+      if (searchParams.filters.size) {
+        results = results.filter(dataset => {
+          const sizeInMB = parseSizeToMB(dataset.dataSize);
+          switch (searchParams.filters.size) {
+            case 'small':
+              return sizeInMB < 100;
+            case 'medium':
+              return sizeInMB >= 100 && sizeInMB <= 1024;
+            case 'large':
+              return sizeInMB > 1024;
+            default:
+              return true;
+          }
+        });
+      }
+      
+      if (searchParams.filters.popularity) {
+        if (searchParams.filters.popularity === 'hot') {
+          results = results.filter(dataset => dataset.popularity > 100);
+        } else if (searchParams.filters.popularity === 'new') {
+          // 按更新时间排序，取最新的
+          results = results.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+        }
+      }
+      
+      setGlobalSearchResults(results);
+      setTotalSearchResults(results.length);
+      setFilteredDatasets(results);
+      
+    } catch (error) {
+      console.error('搜索失败:', error);
+      setGlobalSearchResults([]);
+      setTotalSearchResults(0);
+    } finally {
+      setSearchLoading(false);
+    }
   };
 
   const handleSortMenuOpen = (event) => {
@@ -941,145 +1145,38 @@ const DatasetsPage = () => {
     setSelectedDatasetForDetail(null);
   };
 
-  // 全局搜索处理函数
-  const handleGlobalSearch = async (searchParams) => {
-    setSearchLoading(true);
-    
-    try {
-      // 模拟API调用
-      console.log('执行全局搜索:', searchParams);
-      
-      // 在实际项目中，这里会调用后端API
-      // const response = await fetch('/api/datasets/search', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(searchParams)
-      // });
-      // const results = await response.json();
-      
-      // 模拟搜索逻辑
-      await new Promise(resolve => setTimeout(resolve, 500)); // 模拟延迟
-      
-      let results = [...datasets];
-      
-      // 基本搜索
-      if (searchParams.query) {
-        const query = searchParams.query.toLowerCase();
-        
-        if (searchParams.scope.includes('all')) {
-          // 全字段搜索
-          results = results.filter(dataset => 
-            dataset.title.toLowerCase().includes(query) || 
-            dataset.description.toLowerCase().includes(query) ||
-            dataset.type.toLowerCase().includes(query) ||
-            (dataset.categories && dataset.categories.some(cat => cat.toLowerCase().includes(query))) ||
-            (dataset.category && dataset.category.toLowerCase().includes(query)) ||
-            (dataset.subCategory && dataset.subCategory.toLowerCase().includes(query))
-          );
-        } else {
-          // 指定字段搜索
-          results = results.filter(dataset => {
-            return searchParams.scope.some(scope => {
-              switch (scope) {
-                case 'title':
-                  return dataset.title.toLowerCase().includes(query);
-                case 'description':
-                  return dataset.description.toLowerCase().includes(query);
-                case 'categories':
-                  return dataset.categories && dataset.categories.some(cat => cat.toLowerCase().includes(query));
-                case 'tags':
-                  return dataset.categories && dataset.categories.some(cat => cat.toLowerCase().includes(query));
-                case 'author':
-                  return dataset.author && dataset.author.toLowerCase().includes(query);
-                default:
-                  return false;
-              }
-            });
-          });
-        }
-      }
-      
-      // 快速筛选
-      if (searchParams.filters.type) {
-        const typeMap = {
-          'structured': '结构化数据',
-          'text': '文本数据',
-          'image': '图像数据',
-          'timeseries': '时间序列'
-        };
-        const targetType = typeMap[searchParams.filters.type];
-        if (targetType) {
-          results = results.filter(dataset => dataset.type === targetType);
-        }
-      }
-      
-      if (searchParams.filters.status) {
-        results = results.filter(dataset => dataset.status === searchParams.filters.status);
-      }
-      
-      if (searchParams.filters.size) {
-        results = results.filter(dataset => {
-          const sizeInMB = parseSizeToMB(dataset.dataSize);
-          switch (searchParams.filters.size) {
-            case 'small':
-              return sizeInMB < 100;
-            case 'medium':
-              return sizeInMB >= 100 && sizeInMB <= 1024;
-            case 'large':
-              return sizeInMB > 1024;
-            default:
-              return true;
-          }
-        });
-      }
-      
-      if (searchParams.filters.popularity) {
-        if (searchParams.filters.popularity === 'hot') {
-          results = results.filter(dataset => dataset.popularity > 100);
-        } else if (searchParams.filters.popularity === 'new') {
-          // 按更新时间排序，取最新的
-          results = results.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-        }
-      }
-      
-      // 高级筛选
-      if (searchParams.advanced.title) {
-        const titleQuery = searchParams.advanced.title.toLowerCase();
-        results = results.filter(dataset => dataset.title.toLowerCase().includes(titleQuery));
-      }
-      
-      if (searchParams.advanced.description) {
-        const descQuery = searchParams.advanced.description.toLowerCase();
-        results = results.filter(dataset => dataset.description.toLowerCase().includes(descQuery));
-      }
-      
-      if (searchParams.advanced.author) {
-        const authorQuery = searchParams.advanced.author.toLowerCase();
-        results = results.filter(dataset => dataset.author && dataset.author.toLowerCase().includes(authorQuery));
-      }
-      
-      if (searchParams.advanced.dateRange.start || searchParams.advanced.dateRange.end) {
-        const startDate = searchParams.advanced.dateRange.start ? new Date(searchParams.advanced.dateRange.start) : null;
-        const endDate = searchParams.advanced.dateRange.end ? new Date(searchParams.advanced.dateRange.end) : null;
-        
-        results = results.filter(dataset => {
-          const datasetDate = new Date(dataset.updatedAt);
-          return (!startDate || datasetDate >= startDate) && (!endDate || datasetDate <= endDate);
-        });
-      }
-      
-      setGlobalSearchResults(results);
-      setTotalSearchResults(results.length);
-      setFilteredDatasets(results);
-      
-    } catch (error) {
-      console.error('搜索失败:', error);
-      setGlobalSearchResults([]);
-      setTotalSearchResults(0);
-    } finally {
-      setSearchLoading(false);
-    }
+  // 搜索结果对话框处理函数
+  const handleSearchResultDialogOpen = (searchQuery) => {
+    setCurrentSearchQuery(searchQuery);
+    setSearchResultDialogOpen(true);
   };
+
+  const handleSearchResultDialogClose = () => {
+    setSearchResultDialogOpen(false);
+    setCurrentSearchQuery('');
+  };
+
+  const handleDatasetClickFromSearch = (dataset) => {
+    setSelectedDatasetForDetail(dataset);
+    setDetailDialogOpen(true);
+  };
+
+  const handleDatasetDownloadFromSearch = (dataset) => {
+    console.log('下载数据集:', dataset);
+    // 实现下载逻辑
+  };
+
+  const handleDatasetFavoriteFromSearch = (datasetId, isFavorite) => {
+    console.log('收藏数据集:', datasetId, isFavorite);
+    // 实现收藏逻辑
+  };
+
+  const handleSearchResultPageChange = (newPage) => {
+    // 实现分页逻辑
+    console.log('切换页面:', newPage);
+  };
+
+
 
   return (
     <div className={classes.root}>
@@ -1092,21 +1189,20 @@ const DatasetsPage = () => {
           <Typography variant="subtitle1" className={classes.headerSubtitle}>
             探索和管理数据集资源，支持多种数据格式，为API构建提供数据支撑
           </Typography>
-          <div className={classes.searchContainer}>
-            <div className={classes.searchIcon}>
-              <SearchIcon />
-            </div>
-            <InputBase
-              placeholder="搜索数据集名称、类型或标签..."
-              classes={{
-                root: classes.inputRoot,
-                input: classes.headerSearchInput,
-              }}
-              value={searchQuery}
-              onChange={handleSearchChange}
-              inputProps={{ 'aria-label': 'search datasets' }}
-            />
-          </div>
+          <SearchDropdown
+            searchQuery={searchQuery}
+            onSearchChange={handleSearchQueryChange}
+            onSearchClear={handleSearchClear}
+            searchResults={transformedSearchResults}
+            totalResults={totalSearchResults}
+            loading={searchLoading}
+            placeholder="搜索数据集名称、类型或标签..."
+            maxDisplayResults={5}
+            onResultClick={handleSearchResultClick}
+            onViewAllResults={handleSearchViewAll}
+            resultIcon={StorageIcon}
+            onKeyPress={handleKeyPress}
+          />
           <Button
             variant="contained"
             color="secondary"
@@ -1119,16 +1215,7 @@ const DatasetsPage = () => {
         </Container>
       </Paper>
 
-      <Container maxWidth="xl">
-        {/* 全局搜索组件 */}
-        <DatasetGlobalSearch
-          onSearch={handleGlobalSearch}
-          datasets={datasets}
-          loading={searchLoading}
-          searchResults={globalSearchResults}
-          totalResults={totalSearchResults}
-        />
-
+            <Container maxWidth="xl">
         {/* 顶部筛选器区域 */}
         <Paper style={{ marginBottom: 24, padding: 0 }} elevation={2}>
           <DatasetFilter
@@ -1201,7 +1288,7 @@ const DatasetsPage = () => {
                       icon={<SearchIcon />} 
                       label={`搜索: "${searchQuery}"`}
                       className={classes.rightPanelStatChip}
-                      onDelete={() => setSearchQuery('')}
+                      onDelete={handleSearchClear}
                       color="default"
                       variant="outlined"
                     />
@@ -1290,6 +1377,22 @@ const DatasetsPage = () => {
         open={detailDialogOpen}
         onClose={handleDatasetDetailClose}
         dataset={selectedDatasetForDetail}
+      />
+
+      {/* 搜索结果对话框 */}
+      <DatasetSearchResultDialog
+        open={searchResultDialogOpen}
+        onClose={handleSearchResultDialogClose}
+        searchQuery={currentSearchQuery}
+        searchResults={globalSearchResults}
+        totalResults={totalSearchResults}
+        loading={searchLoading}
+        onDatasetClick={handleDatasetClickFromSearch}
+        onDatasetDownload={handleDatasetDownloadFromSearch}
+        onDatasetFavorite={handleDatasetFavoriteFromSearch}
+        onPageChange={handleSearchResultPageChange}
+        page={1}
+        pageSize={10}
       />
     </div>
   );
