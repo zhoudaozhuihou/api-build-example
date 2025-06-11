@@ -27,7 +27,15 @@ import {
   InputBase,
   Tooltip,
   LinearProgress,
-  CircularProgress
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText,
+  FormControl,
+  InputLabel,
+  Select
 } from '@material-ui/core';
 import { TreeView, TreeItem } from '@material-ui/lab';
 import { 
@@ -44,6 +52,7 @@ import {
   Storage as StorageIcon,
   Info as InfoIcon,
   Category as CategoryIcon,
+  Event as EventIcon,
   ExpandMore,
   ChevronRight as ChevronRightIcon,
   CloudUpload as CloudUploadIcon,
@@ -57,7 +66,10 @@ import {
   FavoriteBorder as FavoriteBorderIcon,
   Code as CodeIcon,
   Clear as ClearIcon,
-  ChevronLeft as ChevronLeftIcon
+  ChevronLeft as ChevronLeftIcon,
+  AccountTree as LineageIcon,
+  Category as CategoryOutlinedIcon,
+  Label as LabelIcon
 } from '@material-ui/icons';
 import { makeStyles } from '@material-ui/core/styles';
 import { apiCategories } from '../constants/apiCategories';
@@ -67,8 +79,16 @@ import DatasetUploadDialog from '../components/DatasetUploadDialog';
 import DatasetFilter from '../components/DatasetFilter';
 import DatasetDetailDialog from '../components/DatasetDetailDialog';
 import SearchDropdown from '../components/SearchDropdown';
-
 import DatasetSearchResultDialog from '../components/DatasetSearchResultDialog';
+
+// Import new common components
+import ManagementLayout from '../components/common/ManagementLayout';
+import {
+  datasetFilterConfig,
+  datasetCategoryConfig,
+  datasetHeaderConfig,
+  datasetCardGridConfig,
+} from '../config/datasetPageConfig';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -130,11 +150,12 @@ const useStyles = makeStyles((theme) => ({
   datasetTitle: {
     fontWeight: 600,
     fontSize: '1.1rem',
-    marginBottom: theme.spacing(1),
+    color: theme.palette.text.primary,
     display: '-webkit-box',
-    '-webkit-line-clamp': 2,
+    '-webkit-line-clamp': 1,
     '-webkit-box-orient': 'vertical',
     overflow: 'hidden',
+    textOverflow: 'ellipsis',
   },
   cardActions: {
     justifyContent: 'space-between',
@@ -144,8 +165,15 @@ const useStyles = makeStyles((theme) => ({
     fontSize: '0.7rem',
   },
   categoryChip: {
-    margin: theme.spacing(0.5),
-    backgroundColor: theme.palette.grey[200],
+    fontSize: '0.65rem',
+    height: '22px',
+    borderRadius: '4px',
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    maxWidth: '100px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    margin: theme.spacing(0, 0.5, 0, 0),
   },
   headerSection: {
     height: 300,
@@ -302,24 +330,117 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(2),
   },
   datasetCard: {
+    minHeight: '320px', // 增加最小高度以适应更多内容
+    width: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
+    borderRadius: theme.shape.borderRadius * 1.5,
+    overflow: 'visible', // 允许内容可见
+    border: '1px solid rgba(0,0,0,0.08)',
+    backgroundColor: theme.palette.background.paper,
+    position: 'relative',
+    boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+    [theme.breakpoints.down('xs')]: {
+      minHeight: '300px', // 小屏幕下最小高度
+    },
+    '&:hover': {
+      transform: 'translateY(-4px)',
+      boxShadow: '0 8px 20px rgba(0,0,0,0.1)',
+      '& $datasetCardTopBar': {
+        height: '8px',
+      },
+    },
+  },
+  datasetCardTopBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '5px',
+    background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+    transition: 'height 0.3s ease',
+  },
+  datasetCardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    padding: theme.spacing(2, 3, 1),
+    backgroundColor: theme.palette.background.paper,
+    minHeight: '80px', // 改为最小高度，允许自适应
+    maxHeight: '120px', // 设置最大高度防止过高
+  },
+  datasetCardContent: {
+    padding: theme.spacing(0),
     height: '100%',
     display: 'flex',
     flexDirection: 'column',
-    transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
-    borderRadius: theme.shape.borderRadius * 1.5,
-    '&:hover': {
-      transform: 'translateY(-4px)',
-      boxShadow: theme.shadows[6],
+    '&:last-child': {
+      paddingBottom: 0,
     },
+  },
+  datasetCardDetails: {
+    display: 'flex',
+    flexWrap: 'wrap', // 允许换行以适应内容
+    padding: theme.spacing(1, 3),
+    marginBottom: theme.spacing(1),
+    minHeight: '40px', // 改为最小高度
+    flex: '1 1 auto', // 自动填充可用空间
+  },
+  datasetCardDetailItem: {
+    display: 'flex',
+    alignItems: 'center',
+    marginRight: theme.spacing(2),
+    marginBottom: theme.spacing(0.5),
+    whiteSpace: 'nowrap', // 防止文本换行
+    minWidth: 'fit-content', // 确保内容能正常显示
+    '& svg': {
+      fontSize: '1rem',
+      marginRight: theme.spacing(0.5),
+      color: theme.palette.text.secondary,
+    },
+    '& .MuiTypography-root': {
+      fontSize: '0.8rem',
+      color: theme.palette.text.secondary,
+    }
+  },
+  datasetCardFooter: {
+    marginTop: 'auto', // 将footer推到底部
+    display: 'flex',
+    flexDirection: 'column',
+    gap: theme.spacing(0.5),
+    padding: theme.spacing(1, 2),
+    borderTop: `1px solid ${theme.palette.divider}`,
+    backgroundColor: 'rgba(0,0,0,0.02)',
+    minHeight: '65px', // 调整高度以适应两行内容
+    flexShrink: 0, // 防止被压缩
+  },
+  datasetCardCategories: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: theme.spacing(0.5),
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  datasetCardActions: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: theme.spacing(0.5),
+  },
+  datasetCardAction: {
+    padding: 4,
   },
   datasetDescription: {
     color: theme.palette.text.secondary,
     display: '-webkit-box',
-    '-webkit-line-clamp': 3,
+    '-webkit-line-clamp': 2,
     '-webkit-box-orient': 'vertical',
     overflow: 'hidden',
-    minHeight: '3.6em',
+    height: '2.4em', // 固定高度
     lineHeight: 1.2,
+    fontSize: '0.85rem',
+    marginTop: theme.spacing(0.5),
   },
   datasetGridContainer: {
     padding: theme.spacing(2),
@@ -460,6 +581,14 @@ const DatasetsPage = () => {
 
   // 筛选后的数据集
   const [filteredDatasets, setFilteredDatasets] = useState(datasets);
+
+  // 分类编辑相关状态
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [currentCategory, setCurrentCategory] = useState(null);
+  const [categoryName, setCategoryName] = useState('');
+  const [parentCategory, setParentCategory] = useState('0');
+  const [isAddMode, setIsAddMode] = useState(false);
   
   // 全局搜索状态
   const [globalSearchResults, setGlobalSearchResults] = useState([]);
@@ -896,6 +1025,74 @@ const DatasetsPage = () => {
     setEditMode(!editMode);
   };
 
+  // 分类编辑处理函数
+  const handleEditDialogOpen = (category, isAdd = false) => {
+    setCurrentCategory(category);
+    setIsAddMode(isAdd);
+    
+    if (!isAdd && category) {
+      setCategoryName(category.name || category.label);
+      setParentCategory(category.parentId || '0');
+    } else {
+      setCategoryName('');
+      setParentCategory(category ? (category.id || category.value) : '0');
+    }
+    
+    setEditDialogOpen(true);
+  };
+
+  const handleEditDialogClose = () => {
+    setEditDialogOpen(false);
+    setCurrentCategory(null);
+    setCategoryName('');
+    setParentCategory('0');
+  };
+
+  const handleDeleteDialogOpen = (category) => {
+    setCurrentCategory(category);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteDialogClose = () => {
+    setDeleteDialogOpen(false);
+    setCurrentCategory(null);
+  };
+
+  const handleSaveCategory = () => {
+    if (!categoryName.trim()) return;
+    
+    // TODO: 实现分类保存逻辑
+    console.log('保存分类:', { categoryName, parentCategory, isAddMode });
+    
+    handleEditDialogClose();
+  };
+
+  const handleDeleteCategory = () => {
+    if (!currentCategory) return;
+    
+    // TODO: 实现分类删除逻辑
+    console.log('删除分类:', currentCategory);
+    
+    handleDeleteDialogClose();
+  };
+
+  const getAllCategoriesFlat = (categories, level = 0, result = []) => {
+    categories.forEach(category => {
+      const categoryData = {
+        id: category.id || category.value,
+        name: category.name || category.label,
+        level: level
+      };
+      result.push(categoryData);
+      
+      if (category.classifications && category.classifications.length > 0) {
+        getAllCategoriesFlat(category.classifications, level + 1, result);
+      }
+    });
+    
+    return result;
+  };
+
   // Initialize expanded states for categories
   useEffect(() => {
     const defaultExpanded = {};
@@ -971,18 +1168,58 @@ const DatasetsPage = () => {
             nodeId={categoryId}
             label={
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0' }}>
-                <Typography variant="body2" style={{ fontWeight: level === 0 ? 600 : 400 }}>
-                  {categoryName}
-                </Typography>
-                <Chip 
-                  size="small" 
-                  label={totalDatasetCount} 
-                  style={{ 
-                    fontSize: '0.7rem', 
-                    height: '20px',
-                    backgroundColor: level === 0 ? '#e3f2fd' : '#f5f5f5'
-                  }} 
-                />
+                <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                  <Typography variant="body2" style={{ fontWeight: level === 0 ? 600 : 400 }}>
+                    {categoryName}
+                  </Typography>
+                  <Chip 
+                    size="small" 
+                    label={totalDatasetCount} 
+                    style={{ 
+                      fontSize: '0.7rem', 
+                      height: '20px',
+                      backgroundColor: level === 0 ? '#e3f2fd' : '#f5f5f5',
+                      marginLeft: '8px'
+                    }} 
+                  />
+                </div>
+                {editMode && (
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <Tooltip title="编辑">
+                      <IconButton 
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditDialogOpen(category);
+                        }}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="删除">
+                      <IconButton 
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteDialogOpen(category);
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="添加子分类">
+                      <IconButton 
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditDialogOpen(category, true);
+                        }}
+                      >
+                        <AddIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </div>
+                )}
               </div>
             }
             onClick={() => handleCategorySelect(category)}
@@ -1009,81 +1246,112 @@ const DatasetsPage = () => {
       <Grid container spacing={3} className={classes.datasetGridContainer}>
         {filteredDatasets.map((dataset) => (
           <Grid item xs={12} sm={6} md={6} lg={4} key={dataset.id} className={classes.datasetGridItem}>
-            <Card className={classes.card}>
-              <CardMedia
-                className={classes.cardMedia}
-                title={dataset.title}
-              >
-                <StorageIcon style={{ fontSize: 60 }} />
-              </CardMedia>
-              <CardContent className={classes.cardContent}>
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                  <div className={classes.datasetType}>
-                    <DescriptionIcon className={classes.datasetIcon} />
-                    <Typography variant="caption">{dataset.type}</Typography>
+            <Card className={classes.datasetCard}>
+              <div className={classes.datasetCardTopBar}></div>
+              <CardContent className={classes.datasetCardContent}>
+                <div className={classes.datasetCardHeader}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="h6" className={classes.datasetTitle}>
+                      {dataset.title}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary" className={classes.datasetDescription}>
+                      {dataset.description}
+                    </Typography>
                   </div>
-                  <Chip 
-                    label={dataset.status === 'public' ? '公开' : '私有'} 
-                    size="small"
-                    color={dataset.status === 'public' ? 'primary' : 'default'}
-                    variant="outlined"
-                    className={classes.statusChip}
-                  />
-                </Box>
-                <Typography variant="h6" className={classes.datasetTitle}>
-                  {dataset.title}
-                </Typography>
-                <Typography variant="body2" color="textSecondary" component="p" style={{ marginBottom: 12 }}>
-                  {dataset.description}
-                </Typography>
-                <Box display="flex" alignItems="center" mb={1}>
-                  <InfoIcon fontSize="small" style={{ marginRight: 8, color: '#757575' }} />
-                  <Typography variant="caption" color="textSecondary">
-                    {dataset.dataSize} {dataset.fileCount} 个文件 更新于 {dataset.updatedAt}
-                  </Typography>
-                </Box>
-                <Box mt={1}>
-                  {dataset.categories.map((category) => (
-                    <Chip
-                      key={category}
-                      label={category}
-                      className={classes.categoryChip}
+                  <div style={{ flexShrink: 0, marginLeft: 8 }}>
+                    <Chip 
+                      label={dataset.status === 'public' ? '公开' : '私有'} 
                       size="small"
+                      color={dataset.status === 'public' ? 'primary' : 'default'}
+                      variant="outlined"
+                      className={classes.statusChip}
                     />
-                  ))}
-                </Box>
-              </CardContent>
-              <Divider />
-              <CardActions className={classes.cardActions}>
-                <Button 
-                  size="small" 
-                  color="primary" 
-                  startIcon={<VisibilityIcon />}
-                  onClick={() => handleDatasetDetailOpen(dataset)}
-                >
-                  查看
-                </Button>
-                <Box>
-                  <IconButton size="small">
-                    <Badge badgeContent={dataset.popularity} color="primary" max={99} overlap="rectangular">
-                      <DownloadIcon fontSize="small" />
-                    </Badge>
-                  </IconButton>
-                  <IconButton size="small">
-                    {dataset.id % 2 === 0 ? (
-                      <BookmarkIcon fontSize="small" color="primary" />
-                    ) : (
-                      <BookmarkBorderIcon fontSize="small" />
+                  </div>
+                </div>
+                
+                <div className={classes.datasetCardDetails}>
+                  <div className={classes.datasetCardDetailItem}>
+                    <StorageIcon />
+                    <Typography variant="body2">{dataset.dataSize}</Typography>
+                  </div>
+                  <div className={classes.datasetCardDetailItem}>
+                    <DescriptionIcon />
+                    <Typography variant="body2">{dataset.fileCount} 个文件</Typography>
+                  </div>
+                  <div className={classes.datasetCardDetailItem}>
+                    <EventIcon />
+                    <Typography variant="body2">{dataset.updatedAt}</Typography>
+                  </div>
+                </div>
+                
+                <div className={classes.datasetCardFooter}>
+                  {/* 第一行：分类标签 */}
+                  <div className={classes.datasetCardCategories}>
+                    <Chip 
+                      size="small" 
+                      label={dataset.type} 
+                      className={classes.categoryChip}
+                      color="primary"
+                      variant="outlined"
+                    />
+                    {dataset.categories.slice(0, 2).map((category) => (
+                      <Chip
+                        key={category}
+                        label={category}
+                        className={classes.categoryChip}
+                        size="small"
+                        variant="outlined"
+                      />
+                    ))}
+                    {dataset.categories.length > 2 && (
+                      <Chip
+                        label={`+${dataset.categories.length - 2}个`}
+                        size="small"
+                        className={classes.categoryChip}
+                        color="default"
+                      />
                     )}
-                  </IconButton>
-                  <IconButton 
-                    size="small" 
-                    onClick={(event) => handleMenuOpen(event, dataset.id)}
-                  >
-                    <MoreIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-              </CardActions>
+                  </div>
+                  
+                  {/* 第二行：操作按钮 */}
+                  <div className={classes.datasetCardActions}>
+                    <Tooltip title="查看详情">
+                      <IconButton 
+                        size="small" 
+                        className={classes.datasetCardAction}
+                        onClick={() => handleDatasetDetailOpen(dataset)}
+                      >
+                        <VisibilityIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="下载">
+                      <IconButton size="small" className={classes.datasetCardAction}>
+                        <Badge badgeContent={dataset.popularity} color="primary" max={99} overlap="rectangular">
+                          <DownloadIcon fontSize="small" />
+                        </Badge>
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="收藏">
+                      <IconButton size="small" className={classes.datasetCardAction}>
+                        {dataset.id % 2 === 0 ? (
+                          <BookmarkIcon fontSize="small" color="primary" />
+                        ) : (
+                          <BookmarkBorderIcon fontSize="small" />
+                        )}
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="更多操作">
+                      <IconButton 
+                        size="small" 
+                        className={classes.datasetCardAction}
+                        onClick={(event) => handleMenuOpen(event, dataset.id)}
+                      >
+                        <MoreIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </div>
+                </div>
+              </CardContent>
             </Card>
           </Grid>
         ))}
@@ -1178,168 +1446,405 @@ const DatasetsPage = () => {
 
 
 
+  // 配置数据集页面的各个部分
+  const headerConfigData = {
+    ...datasetHeaderConfig,
+    searchQuery,
+    onSearchChange: handleSearchQueryChange,
+    onSearchClear: handleSearchClear,
+    searchResults: transformedSearchResults,
+    totalResults: totalSearchResults,
+    searchLoading,
+    onImportClick: handleUploadDialogOpen,
+    totalCount: filteredDatasets.length,
+    // SearchDropdown specific props
+    onSearchResultClick: handleSearchResultClick,
+    onSearchViewAll: handleSearchViewAll,
+    transformedSearchResults,
+    onKeyPress: handleKeyPress,
+    renderResultItem: (item) => (
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <StorageIcon style={{ marginRight: 8, fontSize: '1rem' }} />
+        <div>
+          <div style={{ fontWeight: 500 }}>{item.name}</div>
+          <div style={{ fontSize: '0.8rem', color: '#666' }}>{item.type}</div>
+        </div>
+      </div>
+    )
+  };
+
+  const filterConfigData = {
+    ...datasetFilterConfig,
+    onFilterClear: handleClearAllFilters
+  };
+
+  const categoryConfigData = {
+    ...datasetCategoryConfig,
+    categories: apiCategories,
+    selectedCategory: selectedCategory,
+    onCategorySelect: handleCategorySelect,
+    expandedCategories: expandedCategories,
+    onToggleExpanded: handleNodeToggle,
+    editMode: editMode,
+    onEditModeToggle: handleEditModeToggle,
+    onEditCategory: handleEditDialogOpen,
+    onDeleteCategory: handleDeleteDialogOpen,
+    onAddCategory: (category) => handleEditDialogOpen(category, true),
+    getItemCount: (category) => {
+      const getNestedDatasetCount = (catList) => {
+        let count = 0;
+        catList.forEach(cat => {
+          const categoryMatch = filteredDatasets.filter(dataset => 
+            dataset.category === cat.value || 
+            (dataset.categories && dataset.categories.includes(cat.value))
+          );
+          count += categoryMatch.length;
+          if (cat.children) {
+            count += getNestedDatasetCount(cat.children);
+          }
+        });
+        return count;
+      };
+
+      if (category.children) {
+        return getNestedDatasetCount(category.children);
+      } else {
+        return filteredDatasets.filter(dataset => 
+          dataset.category === category.value || 
+          (dataset.categories && dataset.categories.includes(category.value))
+        ).length;
+      }
+    }
+  };
+
+  const cardGridConfigData = {
+    ...datasetCardGridConfig,
+    items: filteredDatasets,
+    totalCount: filteredDatasets.length,
+    publicCount: filteredDatasets.filter(dataset => dataset.status === 'public').length,
+    searchQuery,
+    onSearchClear: handleSearchClear,
+    renderCard: (dataset) => renderDatasetCard(dataset),
+    customStats: [
+      // 可以添加额外的统计信息芯片
+    ]
+  };
+
+  // 将当前的 activeFilters 转换为新格式
+  const currentActiveFilters = {
+    accessLevel: statusFilter,
+    categories: typeFilters,
+    dataFormat: themeFilters,
+    updateFrequency: null, // TODO: 添加更新频率状态
+    dataSize: dataSizeFilter !== 'all' ? [0, 1000] : null // 简化数据大小范围
+  };
+
+  const handleNewFilterChange = (filterKey, value) => {
+    console.log('Filter change:', filterKey, value);
+    
+    switch (filterKey) {
+      case 'accessLevel':
+        setStatusFilter(value);
+        break;
+      case 'categories':
+        // 数据类型筛选
+        if (Array.isArray(value)) {
+          setTypeFilters(value);
+        } else if (value === null) {
+          setTypeFilters([]);
+        } else {
+          setTypeFilters([value]);
+        }
+        break;
+      case 'dataFormat':
+        // 数据格式筛选
+        if (Array.isArray(value)) {
+          setThemeFilters(value);
+        } else if (value === null) {
+          setThemeFilters([]);
+        } else {
+          setThemeFilters([value]);
+        }
+        break;
+      case 'updateFrequency':
+        // 更新频率筛选（新增）
+        if (Array.isArray(value)) {
+          // 处理多选
+          // TODO: 添加更新频率状态
+        } else {
+          // 处理单选
+          // TODO: 添加更新频率状态
+        }
+        break;
+      case 'dataSize':
+        if (Array.isArray(value) && value.length === 2) {
+          setDataSizeFilter(value[1]);
+        } else if (value === null) {
+          setDataSizeFilter('all');
+        }
+        break;
+      default:
+        console.warn('Unknown filter key:', filterKey);
+        break;
+    }
+  };
+
+  // 渲染单个数据集卡片的函数
+  const renderDatasetCard = (dataset) => {
+    const safeDataset = {
+      id: dataset?.id || 'unknown',
+      name: dataset?.name || '未知数据集',
+      description: dataset?.description || '暂无描述',
+      type: dataset?.type || '未知类型',
+      status: dataset?.status || 'private',
+      size: dataset?.size || '0MB',
+      lastUpdated: dataset?.lastUpdated || '未知',
+      downloadCount: dataset?.downloadCount || 0,
+      categories: dataset?.categories || [],
+      tags: dataset?.tags || [],
+      owner: dataset?.owner || '未知',
+      format: dataset?.format || '未知格式',
+      isFavorite: dataset?.isFavorite || false,
+      ...dataset
+    };
+
+    return (
+      <Card key={safeDataset.id} className={classes.card} onClick={() => handleDatasetDetailOpen(safeDataset)}>
+        {/* 顶部渐变条 */}
+        <Box 
+          style={{
+            height: '4px',
+            background: 'linear-gradient(90deg, #1976d2 0%, #42a5f5 100%)'
+          }} 
+        />
+        
+        {/* 卡片头部 - 标题和状态 */}
+        <CardContent style={{ 
+          padding: '16px 16px 0px 16px',
+          minHeight: '80px',
+          maxHeight: '120px',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
+            <Box flex={1} mr={1}>
+              <Typography className={classes.datasetTitle}>
+                {safeDataset.name}
+              </Typography>
+              <Typography className={classes.datasetType}>
+                <StorageIcon className={classes.datasetIcon} />
+                {safeDataset.type}
+              </Typography>
+            </Box>
+            <Box display="flex" flexDirection="column" alignItems="flex-end">
+              <Chip 
+                label={safeDataset.status === 'public' ? '公开' : safeDataset.status === 'private' ? '私有' : '受限'}
+                size="small"
+                className={classes.statusChip}
+                color={safeDataset.status === 'public' ? 'primary' : safeDataset.status === 'private' ? 'default' : 'secondary'}
+              />
+            </Box>
+          </Box>
+        </CardContent>
+
+        {/* 卡片详情 - 描述和信息 */}
+        <CardContent style={{ 
+          padding: '8px 16px',
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          {/* 描述 */}
+          <Typography 
+            variant="body2" 
+            color="textSecondary"
+            style={{
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              minHeight: '2.4em',
+              lineHeight: '1.2em',
+              marginBottom: '8px',
+              flex: 1
+            }}
+          >
+            {safeDataset.description}
+          </Typography>
+
+          {/* 数据集信息 */}
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+            <Typography variant="caption" color="textSecondary">
+              大小: {safeDataset.size}
+            </Typography>
+            <Typography variant="caption" color="textSecondary">
+              下载: {safeDataset.downloadCount}次
+            </Typography>
+          </Box>
+          <Typography variant="caption" color="textSecondary">
+            更新: {safeDataset.lastUpdated}
+          </Typography>
+        </CardContent>
+
+        {/* 卡片底部 - 分类标签和操作按钮，分两行显示 */}
+        <CardActions style={{ 
+          padding: '8px 16px 16px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'stretch',
+          minHeight: '75px'
+        }}>
+          {/* 第一行：分类标签 */}
+          <Box mb={1} style={{ 
+            minHeight: '26px', 
+            display: 'flex', 
+            alignItems: 'flex-start',
+            flexWrap: 'wrap',
+            gap: '4px'
+          }}>
+            {/* 数据类型标签 */}
+            <Chip
+              label={safeDataset.type}
+              size="small"
+              color="primary"
+              variant="outlined"
+              icon={<CategoryOutlinedIcon fontSize="small" />}
+              style={{ 
+                fontSize: '0.65rem',
+                height: '22px'
+              }}
+            />
+            
+            {/* 数据格式标签 */}
+            {safeDataset.format && (
+              <Chip
+                label={safeDataset.format}
+                size="small"
+                color="secondary"
+                variant="outlined"
+                icon={<LabelIcon fontSize="small" />}
+                style={{ 
+                  fontSize: '0.65rem',
+                  height: '22px'
+                }}
+              />
+            )}
+            
+            {/* 其他分类标签 */}
+            {safeDataset.categories && safeDataset.categories.length > 0 && (
+              safeDataset.categories.slice(0, 1).map((category, index) => (
+                <Chip
+                  key={index}
+                  label={category}
+                  size="small"
+                  variant="outlined"
+                  style={{ 
+                    fontSize: '0.65rem',
+                    height: '22px',
+                    maxWidth: '80px'
+                  }}
+                />
+              ))
+            )}
+            
+            {/* 显示更多分类 */}
+            {safeDataset.categories && safeDataset.categories.length > 1 && (
+              <Tooltip title={safeDataset.categories.slice(1).join(', ')}>
+                <Chip
+                  label={`+${safeDataset.categories.length - 1}`}
+                  size="small"
+                  variant="outlined"
+                  style={{ 
+                    fontSize: '0.65rem',
+                    height: '22px',
+                    minWidth: '30px'
+                  }}
+                />
+              </Tooltip>
+            )}
+          </Box>
+          
+          {/* 第二行：操作按钮 */}
+          <Box display="flex" justifyContent="flex-end" alignItems="center" gap={0.5}>
+            <Tooltip title="查看详情">
+              <IconButton 
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDatasetDetailOpen(safeDataset);
+                }}
+              >
+                <VisibilityIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            
+            <Tooltip title="查看数据血缘">
+              <IconButton 
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // TODO: 实现数据血缘功能
+                  console.log('查看数据血缘:', safeDataset.name);
+                }}
+              >
+                <LineageIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            
+            <Tooltip title={safeDataset.isFavorite ? "取消收藏" : "收藏"}>
+              <IconButton 
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // 处理收藏逻辑
+                }}
+              >
+                {safeDataset.isFavorite ? <FavoriteIcon color="secondary" fontSize="small" /> : <FavoriteBorderIcon fontSize="small" />}
+              </IconButton>
+            </Tooltip>
+            
+            <Tooltip title="下载数据集">
+              <IconButton 
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // 处理下载逻辑
+                }}
+              >
+                <DownloadIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            
+            <Tooltip title="更多操作">
+              <IconButton 
+                size="small"
+                onClick={(e) => handleMenuOpen(e, safeDataset.id)}
+              >
+                <MoreIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </CardActions>
+      </Card>
+    );
+  };
+
   return (
     <div className={classes.root}>
-      {/* Header Section with Search */}
-      <Paper className={classes.headerSection} elevation={0}>
-        <Container className={classes.headerContent}>
-          <Typography variant="h3" className={classes.bannerTitle}>
-            数据集管理
-          </Typography>
-          <Typography variant="subtitle1" className={classes.headerSubtitle}>
-            探索和管理数据集资源，支持多种数据格式，为API构建提供数据支撑
-          </Typography>
-          <SearchDropdown
-            searchQuery={searchQuery}
-            onSearchChange={handleSearchQueryChange}
-            onSearchClear={handleSearchClear}
-            searchResults={transformedSearchResults}
-            totalResults={totalSearchResults}
-            loading={searchLoading}
-            placeholder="搜索数据集名称、类型或标签..."
-            maxDisplayResults={5}
-            onResultClick={handleSearchResultClick}
-            onViewAllResults={handleSearchViewAll}
-            resultIcon={StorageIcon}
-            onKeyPress={handleKeyPress}
-          />
-          <Button
-            variant="contained"
-            color="secondary"
-            startIcon={<CloudUploadIcon />}
-            className={classes.importButtonHeader}
-            onClick={handleUploadDialogOpen}
-          >
-            上传数据集
-          </Button>
-        </Container>
-      </Paper>
-
-            <Container maxWidth="xl">
-        {/* 顶部筛选器区域 */}
-        <Paper style={{ marginBottom: 24, padding: 0 }} elevation={2}>
-          <DatasetFilter
-            // 筛选状态
-            statusFilter={statusFilter}
-            typeFilters={typeFilters}
-            themeFilters={themeFilters}
-            dataSizeFilter={dataSizeFilter}
-            startDate={startDate}
-            endDate={endDate}
-            activeFilters={activeFilters}
-            
-            // 筛选处理函数
-            onStatusFilterChange={handleStatusFilterChange}
-            onFilterChange={handleFilterChange}
-            onDataSizeFilterChange={handleDataSizeFilterChange}
-            onDateChange={handleDateChange}
-            onClearAllFilters={handleClearAllFilters}
-          />
-        </Paper>
-
-        <Grid container spacing={3}>
-          {/* 左侧 - 数据集分类面板 */}
-          <Grid item xs={12} md={3} lg={3}>
-            <Paper className={classes.leftPanel}>
-              <div className={classes.stickyListHeader}>
-                <Typography className={classes.headerTitleText}>
-                  <CategoryIcon style={{ marginRight: 8 }} /> 数据集分类
-                </Typography>
-                <div className={classes.editModeSwitch}>
-                  <Typography className={classes.editModeLabel}>编辑</Typography>
-                  <Switch
-                    size="small"
-                    checked={editMode}
-                    onChange={handleEditModeToggle}
-                    color="primary"
-                  />
-                </div>
-              </div>
-              <div className={classes.categoryListContainer}>
-                {renderCategoryTree(apiCategories)}
-              </div>
-            </Paper>
-          </Grid>
-
-          {/* 右侧 - 数据集列表面板 */}
-          <Grid item xs={12} md={9} lg={9}>
-            <Paper className={classes.contentPanel}>
-              <Box className={classes.rightPanelHeader}>
-                <Typography variant="h6" className={classes.rightPanelTitle}>
-                  数据集列表
-                </Typography>
-                <Box className={classes.rightPanelStats}>
-                  <Chip 
-                    icon={<StorageIcon />} 
-                    label={`共 ${filteredDatasets.length} 个数据集`}
-                    className={classes.rightPanelStatChip}
-                    color="primary"
-                    variant="outlined"
-                  />
-                  <Chip 
-                    icon={<VisibilityIcon />} 
-                    label={`${filteredDatasets.filter(dataset => dataset.status === 'public').length} 个公开`}
-                    className={classes.rightPanelStatChip}
-                    color="secondary"
-                    variant="outlined"
-                  />
-                  {searchQuery && (
-                    <Chip 
-                      icon={<SearchIcon />} 
-                      label={`搜索: "${searchQuery}"`}
-                      className={classes.rightPanelStatChip}
-                      onDelete={handleSearchClear}
-                      color="default"
-                      variant="outlined"
-                    />
-                  )}
-                  
-                  {/* 受功能标志保护的上传按钮 */}
-                  <FeatureGuard 
-                    moduleId={MODULES.DATASET_MANAGEMENT} 
-                    featureId={FEATURES[MODULES.DATASET_MANAGEMENT].UPLOAD_DATASET}
-                  >
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      startIcon={<CloudUploadIcon />}
-                      style={{ marginLeft: 8 }}
-                      size="small"
-                      onClick={handleUploadDialogOpen}
-                    >
-                      上传数据集
-                    </Button>
-                  </FeatureGuard>
-                </Box>
-              </Box>
-              
-              <Divider />
-              
-              {/* 数据集卡片列表 */}
-              {filteredDatasets.length > 0 ? (
-                renderDatasetCards()
-              ) : (
-                <div className={classes.emptyState}>
-                  <StorageIcon className={classes.emptyStateIcon} />
-                  <Typography variant="h6">未找到匹配的数据集</Typography>
-                  <Typography variant="body2" className={classes.emptyStateText}>
-                    没有找到符合当前筛选条件的数据集。尝试调整筛选条件或清除所有筛选器
-                  </Typography>
-                  <Button
-                    variant="outlined"
-                    color="primary"
-                    startIcon={<ClearIcon />}
-                    style={{ marginTop: 16 }}
-                    onClick={handleClearAllFilters}
-                  >
-                    清除所有筛选器
-                  </Button>
-                </div>
-              )}
-            </Paper>
-          </Grid>
-        </Grid>
-      </Container>
+      <ManagementLayout
+        headerConfig={headerConfigData}
+        filterConfig={filterConfigData}
+        activeFilters={currentActiveFilters}
+        onFilterChange={handleNewFilterChange}
+        showFilters={true}
+        categoryConfig={categoryConfigData}
+        showCategory={true}
+        cardGridConfig={cardGridConfigData}
+        leftColumnWidth={3}
+        rightColumnWidth={9}
+        showFilterInLeftColumn={false}
+      />
 
       {/* Dataset action menu */}
       <Menu
@@ -1394,6 +1899,68 @@ const DatasetsPage = () => {
         page={1}
         pageSize={10}
       />
+
+      {/* 分类编辑对话框 */}
+      <Dialog open={editDialogOpen} onClose={handleEditDialogClose}>
+        <DialogTitle>{isAddMode ? '添加分类' : '编辑分类'}</DialogTitle>
+        <DialogContent>
+          <TextField
+            label="分类名称"
+            value={categoryName}
+            onChange={(e) => setCategoryName(e.target.value)}
+            fullWidth
+            required
+            margin="normal"
+          />
+          {isAddMode && (
+            <FormControl fullWidth margin="normal">
+              <InputLabel>父分类</InputLabel>
+              <Select
+                value={parentCategory}
+                onChange={(e) => setParentCategory(e.target.value)}
+              >
+                <MenuItem value="0">
+                  <em>顶级分类</em>
+                </MenuItem>
+                {getAllCategoriesFlat(apiCategories).map((cat) => (
+                  <MenuItem key={cat.id} value={cat.id} disabled={cat.id === (currentCategory?.id || currentCategory?.value)}>
+                    {cat.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleEditDialogClose} color="primary">
+            取消
+          </Button>
+          <Button onClick={handleSaveCategory} color="primary" variant="contained" disabled={!categoryName.trim()}>
+            保存
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 删除确认对话框 */}
+      <Dialog open={deleteDialogOpen} onClose={handleDeleteDialogClose}>
+        <DialogTitle>确认删除</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            您确定要删除分类 "{currentCategory?.name || currentCategory?.label}" 吗？
+            {currentCategory?.classifications?.length > 0 && (
+              <span> 此操作也将删除所有子分类。</span>
+            )}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteDialogClose} color="primary">
+            取消
+          </Button>
+          <Button onClick={handleDeleteCategory} color="secondary">
+            删除
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

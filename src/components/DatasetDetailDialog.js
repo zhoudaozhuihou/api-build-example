@@ -166,9 +166,23 @@ const DatasetDetailDialog = ({ open, onClose, dataset }) => {
 
   if (!dataset) return null;
 
+  // 确保dataset对象有所有必需的字段
+  const safeDataset = {
+    title: dataset.title || '未知数据集',
+    description: dataset.description || '暂无描述',
+    type: dataset.type || '未知类型',
+    dataSize: dataset.dataSize || '未知大小',
+    fileCount: dataset.fileCount || 0,
+    updatedAt: dataset.updatedAt || '未知',
+    status: dataset.status || 'private',
+    owner: dataset.owner || '数据团队',
+    categories: dataset.categories || [],
+    ...dataset // 保留其他所有字段
+  };
+
   // 模拟数据样本
   const getSampleData = () => {
-    switch (dataset.type) {
+    switch (safeDataset.type) {
       case '结构化数据':
         return [
           { id: '1001', user_id: 'user_12345', action: 'view', product_id: 'prod_789', timestamp: '2023-06-15 10:30:22' },
@@ -229,7 +243,7 @@ const DatasetDetailDialog = ({ open, onClose, dataset }) => {
     >
       <DialogTitle className={classes.dialogTitle}>
         <StorageIcon style={{ marginRight: theme.spacing(1) }} />
-        {dataset.title}
+        {safeDataset.title}
         <Button
           className={classes.closeButton}
           onClick={onClose}
@@ -262,7 +276,7 @@ const DatasetDetailDialog = ({ open, onClose, dataset }) => {
                   数据集描述
                 </Typography>
                 <Typography variant="body1" paragraph>
-                  {dataset.description}
+                  {safeDataset.description}
                 </Typography>
                 
                 <Divider style={{ margin: '16px 0' }} />
@@ -272,19 +286,19 @@ const DatasetDetailDialog = ({ open, onClose, dataset }) => {
                     <div className={classes.metaInfo}>
                       <CategoryIcon />
                       <Typography variant="body2">
-                        <strong>数据类型：</strong>{dataset.type}
+                        <strong>数据类型：</strong>{safeDataset.type}
                       </Typography>
                     </div>
                     <div className={classes.metaInfo}>
                       <StorageIcon />
                       <Typography variant="body2">
-                        <strong>数据大小：</strong>{dataset.dataSize}
+                        <strong>数据大小：</strong>{safeDataset.dataSize}
                       </Typography>
                     </div>
                     <div className={classes.metaInfo}>
                       <DescriptionIcon />
                       <Typography variant="body2">
-                        <strong>文件数量：</strong>{dataset.fileCount} 个文件
+                        <strong>文件数量：</strong>{safeDataset.fileCount} 个文件
                       </Typography>
                     </div>
                   </Grid>
@@ -292,19 +306,19 @@ const DatasetDetailDialog = ({ open, onClose, dataset }) => {
                     <div className={classes.metaInfo}>
                       <ScheduleIcon />
                       <Typography variant="body2">
-                        <strong>最后更新：</strong>{dataset.updatedAt}
+                        <strong>最后更新：</strong>{safeDataset.updatedAt}
                       </Typography>
                     </div>
                     <div className={classes.metaInfo}>
                       <VisibilityIcon />
                       <Typography variant="body2">
-                        <strong>访问权限：</strong>{dataset.status === 'public' ? '公开' : '私有'}
+                        <strong>访问权限：</strong>{safeDataset.status === 'public' ? '公开' : '私有'}
                       </Typography>
                     </div>
                     <div className={classes.metaInfo}>
                       <PersonIcon />
                       <Typography variant="body2">
-                        <strong>创建者：</strong>{dataset.owner || '数据团队'}
+                        <strong>创建者：</strong>{safeDataset.owner}
                       </Typography>
                     </div>
                   </Grid>
@@ -316,7 +330,7 @@ const DatasetDetailDialog = ({ open, onClose, dataset }) => {
                   分类标签
                 </Typography>
                 <Box>
-                  {dataset.categories.map((category, index) => (
+                  {safeDataset.categories.map((category, index) => (
                     <Chip
                       key={index}
                       label={category}
@@ -368,7 +382,7 @@ const DatasetDetailDialog = ({ open, onClose, dataset }) => {
               以下显示数据集的前几行数据样本，供您了解数据结构和内容
             </Typography>
             
-            {sampleData.length > 0 ? (
+            {sampleData.length > 0 && sampleData[0] ? (
               <TableContainer component={Paper} className={classes.sampleTable}>
                 <Table size="small">
                   <TableHead>
@@ -409,7 +423,7 @@ const DatasetDetailDialog = ({ open, onClose, dataset }) => {
               <Grid item xs={3}>
                 <Card className={classes.statItem}>
                   <CardContent>
-                    <div className={classes.statNumber}>{dataset.fileCount}</div>
+                    <div className={classes.statNumber}>{safeDataset.fileCount}</div>
                     <div className={classes.statLabel}>文件数量</div>
                   </CardContent>
                 </Card>
@@ -417,7 +431,7 @@ const DatasetDetailDialog = ({ open, onClose, dataset }) => {
               <Grid item xs={3}>
                 <Card className={classes.statItem}>
                   <CardContent>
-                    <div className={classes.statNumber}>{dataset.dataSize}</div>
+                    <div className={classes.statNumber}>{safeDataset.dataSize}</div>
                     <div className={classes.statLabel}>数据大小</div>
                   </CardContent>
                 </Card>

@@ -298,19 +298,19 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: 'center',
   },
   apiCard: {
-    height: '320px', // 统一高度
+    minHeight: '320px', // 最小高度，允许内容撑开
     width: '100%',
     display: 'flex',
     flexDirection: 'column',
     transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
     borderRadius: theme.shape.borderRadius * 1.5,
-    overflow: 'hidden',
+    overflow: 'visible', // 允许内容可见
     border: '1px solid rgba(0,0,0,0.08)',
     backgroundColor: theme.palette.background.paper,
     position: 'relative',
     boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
     [theme.breakpoints.down('xs')]: {
-      height: '300px', // 小屏幕下略微减小高度
+      minHeight: '300px', // 小屏幕下最小高度
     },
     '&:hover': {
       transform: 'translateY(-4px)',
@@ -335,7 +335,7 @@ const useStyles = makeStyles((theme) => ({
     alignItems: 'flex-start',
     padding: theme.spacing(3, 3, 1),
     backgroundColor: theme.palette.background.paper,
-    height: '100px', // 固定头部高度
+    minHeight: '100px', // 最小头部高度，允许内容撑开
   },
   apiIcon: {
     marginRight: theme.spacing(1.5),
@@ -374,17 +374,24 @@ const useStyles = makeStyles((theme) => ({
     flexGrow: 1,
     display: 'flex',
     flexDirection: 'column',
-    overflow: 'hidden',
+    overflow: 'visible', // 允许内容可见
   },
   apiEndpointsContainer: {
     padding: theme.spacing(0, 2),
     marginTop: theme.spacing(1),
     marginBottom: theme.spacing(1.5),
-    maxHeight: '70px',
-    overflow: 'hidden',
-    '&:hover': {
-      maxHeight: '90px',
-      overflow: 'auto',
+    maxHeight: '90px', // 增加最大高度
+    overflow: 'auto', // 始终允许滚动
+    scrollbarWidth: 'thin',
+    '&::-webkit-scrollbar': {
+      width: '4px',
+    },
+    '&::-webkit-scrollbar-track': {
+      background: 'transparent',
+    },
+    '&::-webkit-scrollbar-thumb': {
+      backgroundColor: theme.palette.grey[400],
+      borderRadius: '2px',
     },
   },
   apiEndpointLabel: {
@@ -770,19 +777,25 @@ const useStyles = makeStyles((theme) => ({
   apiCardFooter: {
     marginTop: 'auto', // 将footer推到底部
     display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'column', // 改为纵向布局
     padding: theme.spacing(1.5, 2),
     borderTop: `1px solid ${theme.palette.divider}`,
     backgroundColor: 'rgba(0,0,0,0.02)',
-    minHeight: '50px', // 固定底部高度
+    minHeight: '65px', // 增加最小高度以适应两行布局
+    gap: theme.spacing(1), // 添加行间距
   },
-  apiCardCategories: {
+  apiCardCategoriesRow: {
     display: 'flex',
     flexWrap: 'wrap',
     gap: theme.spacing(0.5),
-    maxWidth: '70%', // 限制分类标签的宽度
-    overflow: 'hidden',
+    minHeight: '24px', // 设置最小高度
+    alignItems: 'flex-start',
+  },
+  apiCardActionsRow: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    minHeight: '24px', // 设置最小高度
   },
   apiCardActions: {
     display: 'flex',
@@ -815,8 +828,7 @@ const useStyles = makeStyles((theme) => ({
   apiCardDetailItem: {
     display: 'flex',
     alignItems: 'center',
-    marginRight: theme.spacing(2),
-    whiteSpace: 'nowrap', // 防止文本换行
+    marginBottom: theme.spacing(0.5), // 添加底部间距
     '& svg': {
       fontSize: '1rem',
       marginRight: theme.spacing(0.5),
@@ -825,18 +837,16 @@ const useStyles = makeStyles((theme) => ({
     '& .MuiTypography-root': {
       fontSize: '0.8rem',
       color: theme.palette.text.secondary,
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
-      maxWidth: '120px', // 限制文本宽度
+      wordBreak: 'break-all', // 允许长文本换行
     }
   },
   apiCardDetails: {
     display: 'flex',
-    flexWrap: 'nowrap', // 防止换行
+    flexWrap: 'wrap', // 允许换行
     padding: theme.spacing(1, 3),
     marginBottom: theme.spacing(1),
-    height: '40px', // 固定详情区域高度
-    overflow: 'hidden', // 隐藏溢出内容
+    minHeight: '40px', // 最小高度，允许内容撑开
+    gap: theme.spacing(1), // 添加间距
   },
   categoryTreeContainer: {
     backgroundColor: theme.palette.background.paper,
@@ -2504,7 +2514,8 @@ const ApiCatalog = () => {
           </div>
           
           <div className={classes.apiCardFooter}>
-            <div className={classes.apiCardCategories}>
+            {/* 第一行：分类标签 */}
+            <div className={classes.apiCardCategoriesRow}>
               {api.category && (
                 <Tooltip title="分类">
                   <Chip 
@@ -2530,29 +2541,34 @@ const ApiCatalog = () => {
                 </Tooltip>
               )}
             </div>
-            <div className={classes.apiCardActions}>
-              <Tooltip title="查看API详情">
-                <IconButton 
-                  size="small" 
-                  className={classes.apiCardAction}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSelectApi(api);
-                  }}
-                >
-                  <VisibilityIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-              {renderSubscribers(api)}
-              <Tooltip title="查看API血缘关系">
-                <IconButton 
-                  size="small" 
-                  className={classes.apiCardAction}
-                  onClick={(e) => handleOpenLineageDialog(api, e)}
-                >
-                  <LineageIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
+            
+            {/* 第二行：操作按钮 */}
+            <div className={classes.apiCardActionsRow}>
+              <div style={{ flex: 1 }}></div> {/* 占位符，将按钮推到右侧 */}
+              <div className={classes.apiCardActions}>
+                <Tooltip title="查看API详情">
+                  <IconButton 
+                    size="small" 
+                    className={classes.apiCardAction}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelectApi(api);
+                    }}
+                  >
+                    <VisibilityIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                {renderSubscribers(api)}
+                <Tooltip title="查看API血缘关系">
+                  <IconButton 
+                    size="small" 
+                    className={classes.apiCardAction}
+                    onClick={(e) => handleOpenLineageDialog(api, e)}
+                  >
+                    <LineageIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </div>
             </div>
           </div>
         </CardContent>
